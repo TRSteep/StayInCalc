@@ -1,0 +1,14 @@
+# Личные данные: профили (даты поездок членов семьи) в репозиторий не попадают
+data/profiles/
+
+# Сборка
+*.exe
+*.tmp
+*.test
+*.out
+
+# IDE / ОС
+.idea/
+.vscode/
+Thumbs.db
+.DS_Store

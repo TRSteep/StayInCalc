@@ -1,0 +1,199 @@
+{
+  "version": "1",
+  "comment": "Правила пребывания. registration.within_days при required=true — сколько дней с даты въезда можно находиться без регистрации. Значения — ПРИМЕРЫ, проверьте их по официальным источникам перед использованием. 0 = не ограничено. Дни считаются включительно (день въезда и день выезда — дни пребывания). year_mode: calendar — календарный год, rolling — последние 365 дней. Правило выбирается по гражданству профиля; \"*\" — для всех остальных.",
+  "countries": [
+    {
+      "id": "SCHENGEN",
+      "name": "Шенгенская зона",
+      "rules": [
+        {
+          "citizenships": ["RU", "BY"],
+          "visa_required": true,
+          "visa_note": "Нужна шенгенская виза; срок по визе не может превышать указанный в ней.",
+          "max_consecutive": 90,
+          "max_in_period": 90,
+          "period_days": 180,
+          "max_per_year": 0,
+          "year_mode": "calendar",
+          "visa_run": { "allowed": false, "min_days_outside": 0, "max_per_year": 0, "note": "Выезд не обнуляет правило 90/180." },
+          "registration": { "required": false, "within_days": 0, "extends_stay": false, "extended": {} },
+          "vehicle": { "max_consecutive": 0, "max_in_period": 183, "period_days": 365, "max_per_year": 0, "year_mode": "rolling", "note": "Временный ввоз ТС: до 6 месяцев в течение 12 месяцев." },
+          "source": "",
+          "updated": "",
+          "notes": "Пример. Проверьте актуальность."
+        },
+        {
+          "citizenships": ["*"],
+          "visa_required": false,
+          "max_consecutive": 90,
+          "max_in_period": 90,
+          "period_days": 180,
+          "year_mode": "calendar",
+          "visa_run": { "allowed": false },
+          "registration": {},
+          "vehicle": { "max_in_period": 183, "period_days": 365, "year_mode": "rolling" },
+          "notes": "Для безвизовых стран — 90/180. Проверьте, нужна ли виза для вашего гражданства."
+        }
+      ]
+    },
+    {
+      "id": "GE",
+      "name": "Грузия",
+      "rules": [
+        {
+          "citizenships": ["RU", "BY", "KZ", "UA", "AM"],
+          "visa_required": false,
+          "max_consecutive": 365,
+          "max_in_period": 0,
+          "period_days": 0,
+          "max_per_year": 0,
+          "year_mode": "calendar",
+          "visa_run": { "allowed": true, "min_days_outside": 0, "max_per_year": 0, "note": "После выезда срок начинается заново." },
+          "registration": { "required": false, "within_days": 0, "extends_stay": false, "extended": {} },
+          "vehicle": { "max_consecutive": 90, "max_in_period": 0, "period_days": 0, "max_per_year": 0, "year_mode": "calendar", "note": "Пример: срок временного ввоза уточните на таможне." },
+          "notes": "Пример. Проверьте актуальность."
+        }
+      ]
+    },
+    {
+      "id": "TR",
+      "name": "Турция",
+      "rules": [
+        {
+          "citizenships": ["RU"],
+          "visa_required": false,
+          "max_consecutive": 60,
+          "max_in_period": 90,
+          "period_days": 180,
+          "max_per_year": 0,
+          "year_mode": "calendar",
+          "visa_run": { "allowed": true, "min_days_outside": 0, "max_per_year": 0, "note": "Повторный въезд возможен, но действует 90/180." },
+          "registration": { "required": false, "within_days": 0, "extends_stay": false, "extended": {} },
+          "vehicle": { "max_consecutive": 0, "max_in_period": 183, "period_days": 365, "max_per_year": 0, "year_mode": "rolling", "note": "Пример: до 6 месяцев в течение 12 месяцев." },
+          "notes": "Пример. Проверьте актуальность."
+        }
+      ]
+    },
+    {
+      "id": "TH",
+      "name": "Таиланд",
+      "rules": [
+        {
+          "citizenships": ["RU", "BY", "KZ"],
+          "visa_required": false,
+          "max_consecutive": 60,
+          "max_in_period": 0,
+          "period_days": 0,
+          "max_per_year": 0,
+          "year_mode": "calendar",
+          "visa_run": { "allowed": true, "min_days_outside": 0, "max_per_year": 2, "note": "Число безвизовых въездов по суше ограничено." },
+          "registration": {
+            "required": false,
+            "within_days": 0,
+            "extends_stay": true,
+            "extended": { "max_consecutive": 90 },
+            "note": "Отметка «Регистрация» = продление в иммиграционном офисе на +30 дней. Уведомление TM30 (в течение 24 ч) подаёт арендодатель/отель."
+          },
+          "vehicle": { "max_consecutive": 30, "max_in_period": 0, "period_days": 0, "max_per_year": 0, "year_mode": "calendar", "note": "Пример: временный ввоз 30 дней, возможно продление." },
+          "notes": "Пример. Проверьте актуальность."
+        }
+      ]
+    },
+    {
+      "id": "KZ",
+      "name": "Казахстан",
+      "rules": [
+        {
+          "citizenships": ["RU", "BY", "AM", "KG"],
+          "visa_required": false,
+          "max_consecutive": 0,
+          "max_in_period": 90,
+          "period_days": 180,
+          "max_per_year": 0,
+          "year_mode": "calendar",
+          "visa_run": { "allowed": false, "min_days_outside": 0, "max_per_year": 0 },
+          "registration": { "required": true, "within_days": 30, "extends_stay": true, "extended": {}, "note": "Для граждан ЕАЭС." },
+          "vehicle": { "max_consecutive": 365, "max_in_period": 0, "period_days": 0, "max_per_year": 0, "year_mode": "calendar", "note": "До 1 года с момента пересечения госграницы РК (п. 2 ст. 65 Закона РК «О дорожном движении»)." },
+          "notes": "Пример. Проверьте актуальность."
+        }
+      ]
+    },
+    {
+      "id": "AM",
+      "name": "Армения",
+      "rules": [
+        {
+          "citizenships": ["RU", "BY", "KZ"],
+          "visa_required": false,
+          "max_consecutive": 180,
+          "max_in_period": 0,
+          "period_days": 0,
+          "max_per_year": 180,
+          "year_mode": "rolling",
+          "visa_run": { "allowed": true, "min_days_outside": 0, "max_per_year": 0 },
+          "registration": { "required": false, "within_days": 0, "extends_stay": false, "extended": {} },
+          "vehicle": { "note": "ТС, зарегистрированные в ЕАЭС, — без ограничений по сроку." },
+          "notes": "Пример. Проверьте актуальность."
+        }
+      ]
+    },
+    {
+      "id": "RS",
+      "name": "Сербия",
+      "rules": [
+        {
+          "citizenships": ["RU"],
+          "visa_required": false,
+          "max_consecutive": 30,
+          "max_in_period": 0,
+          "period_days": 0,
+          "max_per_year": 0,
+          "year_mode": "calendar",
+          "visa_run": { "allowed": true, "min_days_outside": 0, "max_per_year": 0 },
+          "registration": { "required": true, "within_days": 1, "extends_stay": false, "extended": {}, "note": "Регистрация (бели картон) в течение 24 часов." },
+          "vehicle": { "max_in_period": 183, "period_days": 365, "year_mode": "rolling", "note": "Пример." },
+          "notes": "Пример. Проверьте актуальность."
+        }
+      ]
+    },
+    {
+      "id": "AE",
+      "name": "ОАЭ",
+      "rules": [
+        {
+          "citizenships": ["RU"],
+          "visa_required": false,
+          "max_consecutive": 90,
+          "max_in_period": 90,
+          "period_days": 180,
+          "max_per_year": 0,
+          "year_mode": "calendar",
+          "visa_run": { "allowed": false },
+          "registration": {},
+          "vehicle": { "max_consecutive": 90, "note": "Пример." },
+          "notes": "Пример. Проверьте актуальность."
+        }
+      ]
+    },
+    {
+      "id": "VN",
+      "name": "Вьетнам",
+      "rules": [
+        {
+          "citizenships": ["RU", "BY"],
+          "visa_required": false,
+          "visa_note": "Для пребывания дольше безвизового срока — электронная виза до 90 дней.",
+          "max_consecutive": 45,
+          "max_in_period": 0,
+          "period_days": 0,
+          "max_per_year": 0,
+          "year_mode": "calendar",
+          "visa_run": { "allowed": true, "min_days_outside": 0, "max_per_year": 0 },
+          "registration": { "required": false, "within_days": 0, "extends_stay": false, "extended": {}, "note": "Регистрацию по месту проживания делает отель/арендодатель." },
+          "vehicle": { "note": "Пример: временный ввоз требует разрешения." },
+          "notes": "Пример. Проверьте актуальность."
+        }
+      ]
+    }
+  ]
+}
