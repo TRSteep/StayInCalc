@@ -257,23 +257,6 @@ func (u *UI) report() string {
 	fmt.Fprintf(&b, "- Срок: %s\n", limitsText(rule.Limits))
 
 	vr := rule.VisaRun
-	switch {
-	case vr.Allowed && vr.MinDaysOutside == 0:
-		b.WriteString("- Повторный въезд: новый отсчёт лимита за въезд; допуск решает пограничная служба")
-	case vr.Allowed:
-		fmt.Fprintf(&b, "- Визаран: работает (вне страны минимум %d дн.)", vr.MinDaysOutside)
-	case vr.MinDaysOutside > 0:
-		fmt.Fprintf(&b, "- Визаран: не обнуляет срок, пока не проведено %d дн. вне страны", vr.MinDaysOutside)
-	default:
-		b.WriteString("- Выезд не обнуляет общий лимит дней")
-	}
-	if vr.MaxPerYear > 0 {
-		fmt.Fprintf(&b, "; не более %d въездов в год", vr.MaxPerYear)
-	}
-	if vr.Note != "" {
-		b.WriteString(" — " + vr.Note)
-	}
-	b.WriteString("\n")
 
 	reg := rule.Registration
 	if reg.Manual {
@@ -337,6 +320,9 @@ func (u *UI) report() string {
 
 	r := evaluate(trips, lim, resetGap(rule), u.refDate, rawRule)
 	stayDecision(&b, r, "вы", regCap)
+	if r.Error == nil {
+		visaRunBlock(&b, rawRule.ForEntry(u.refDate.Format(dateISO)), r)
+	}
 	if rule.VisaRequired {
 		b.WriteString("_Нужна виза: рассчитанный срок не может превышать срок, указанный в визе._\n\n")
 	}
