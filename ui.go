@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -300,7 +301,7 @@ func (u *UI) selectProfile(p *Profile) {
 		}
 	}
 	if u.country == nil && len(u.countries.Countries) > 0 {
-		u.countrySel.SetSelected(u.countries.Countries[0].Name)
+		u.countrySel.SetSelected(u.countrySel.Options[0])
 		return
 	}
 	u.rebuildTrips()
@@ -496,6 +497,7 @@ func (u *UI) fillCountries() {
 	for _, c := range u.countries.Countries {
 		names = append(names, c.Name)
 	}
+	sort.SliceStable(names, func(i, j int) bool { return nameSortKey(names[i]) < nameSortKey(names[j]) })
 	u.countrySel.Options = names
 	u.countrySel.Refresh()
 }

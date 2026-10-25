@@ -54,13 +54,7 @@ func (u *UI) citizenshipOptions() []string {
 		labels = append(labels, citizenshipLabel(code))
 	}
 	sort.Slice(labels, func(i, j int) bool {
-		if labels[i] == citizenshipLabel("RU") {
-			return labels[j] != labels[i]
-		}
-		if labels[j] == citizenshipLabel("RU") {
-			return false
-		}
-		return labels[i] < labels[j]
+		return nameSortKey(labels[i]) < nameSortKey(labels[j])
 	})
 	return labels
 }

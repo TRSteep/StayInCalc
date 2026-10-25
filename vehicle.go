@@ -44,12 +44,12 @@ func (u *UI) vehicleCountryOptions() []string {
 	}
 	labels := []string{}
 	for code, include := range codes {
-		if include && code != "RU" {
+		if include {
 			labels = append(labels, vehicleCountryLabel(code))
 		}
 	}
-	sort.Strings(labels)
-	return append([]string{vehicleCountryUnknown, vehicleCountryLabel("RU")}, labels...)
+	sort.SliceStable(labels, func(i, j int) bool { return nameSortKey(labels[i]) < nameSortKey(labels[j]) })
+	return append([]string{vehicleCountryUnknown}, labels...)
 }
 
 func (v VehicleRule) forRegistration(code string) (VehicleRule, int) {

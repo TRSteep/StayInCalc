@@ -30,7 +30,7 @@ func russianRules(t *testing.T) map[string]*Rule {
 
 func TestRussianRulesAndAlbania(t *testing.T) {
 	rules := russianRules(t)
-	if len(rules) != 12 {
+	if len(rules) != 13 {
 		t.Fatalf("countries: %d", len(rules))
 	}
 	if !rules["AL"].VisaRequired || rules["AL"].MaxInPeriod != 90 || rules["AL"].PeriodDays != 180 {

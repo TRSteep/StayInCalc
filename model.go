@@ -348,8 +348,19 @@ func (s *Store) ListProfiles() ([]*Profile, error) {
 		}
 		out = append(out, p)
 	}
-	sort.Slice(out, func(i, j int) bool { return strings.ToLower(out[i].Name) < strings.ToLower(out[j].Name) })
+	sort.Slice(out, func(i, j int) bool {
+		a, b := nameSortKey(out[i].Name), nameSortKey(out[j].Name)
+		if a == b {
+			return out[i].file < out[j].file
+		}
+		return a < b
+	})
 	return out, nil
+}
+
+// Русские имена сортируются без учёта регистра, ё — рядом с е.
+func nameSortKey(name string) string {
+	return strings.ReplaceAll(strings.ToLower(strings.TrimSpace(name)), "ё", "е")
 }
 
 func (s *Store) loadProfile(path string) (*Profile, error) {
