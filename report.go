@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/url"
+	"sort"
 	"strings"
 	"time"
 )
@@ -370,7 +371,8 @@ func (u *UI) report() string {
 	}
 
 	// --- Машина ---
-	vl := rule.Vehicle.Limits
+	vehicleRule, minOutside := rule.Vehicle.forRegistration(u.cur.VehicleRegistrationCountry)
+	vl := vehicleRule.Limits
 	carTrips := u.cur.CarTrips[u.country.ID]
 	hasCar := false
 	for _, t := range carTrips {
@@ -386,7 +388,19 @@ func (u *UI) report() string {
 			vl = Limits{}
 		}
 		cr := Evaluate(carTrips, vl, 0, u.refDate)
-		if localRegistration || rule.Vehicle.Manual {
+		invalidEntry, earliest, vehicleHistory := vehicleReentry(carTrips, vl, minOutside, u.refDate)
+		cr.Violations = append(cr.Violations, vehicleHistory...)
+		sort.SliceStable(cr.Violations, func(i, j int) bool { return cr.Violations[i].Date.Before(cr.Violations[j].Date) })
+		if !earliest.IsZero() {
+			cr.EarliestEntry = &earliest
+			cr.StayFromEarly = vehicleStayDeadline(earliest, vl)
+			cr.EarlyForecastLimited = false
+			if !cr.InCountry {
+				cr.EntryBlocked = true
+				cr.LatestReason = "обязательный перерыв после использования срока автомобиля"
+			}
+		}
+		if localRegistration || vehicleRule.Manual {
 			if localRegistration {
 				b.WriteString("**Местная регистрация автомобиля.** Срок туристического ввоза для иностранных номеров здесь не применяется.\n\n")
 			} else {
@@ -406,14 +420,20 @@ func (u *UI) report() string {
 				fmt.Fprintf(&b, "- Учтено дней в %d году: %d.\n\n", cr.Ref.Year(), cr.Used.InYear)
 			}
 		} else {
-			stayBlock(&b, cr, vl, "машина", nil)
+			if !invalidEntry.IsZero() {
+				fmt.Fprintf(&b, "**Нарушен обязательный перерыв перед повторным въездом автомобиля %s.** После использования полного срока нужен вывоз на %d полных дней.\n\nПри выезде сегодня, %s, повторный въезд возможен не раньше **%s**.\n\n", fd(invalidEntry), minOutside, fd(u.refDate), fd(earliest))
+				stayUsage(&b, cr, vl, "машина", nil)
+				violations(&b, cr)
+			} else {
+				stayBlock(&b, cr, vl, "машина", nil)
+			}
 			fmt.Fprintf(&b, "Временный ввоз: %s.\n\n", limitsText(vl))
 		}
 		if !localRegistration {
-			fmt.Fprintf(&b, "%s\n", rule.Vehicle.Note)
+			fmt.Fprintf(&b, "%s\n", vehicleRule.Note)
 		}
-		if !localRegistration && rule.Vehicle.Source != "" {
-			fmt.Fprintf(&b, "\nИсточник: %s\n", sourceLinks(rule.Vehicle.Source))
+		if !localRegistration && vehicleRule.Source != "" {
+			fmt.Fprintf(&b, "\nИсточник: %s\n", sourceLinks(vehicleRule.Source))
 		}
 	}
 	return b.String()

@@ -20,10 +20,14 @@ func TestUISnapshot(t *testing.T) {
 		t.Fatal(err)
 	}
 	p, _ := s.NewProfile("Иван", "RU")
-	p.LastCountry = "TR"
+	country := os.Getenv("SNAPSHOT_COUNTRY")
+	if country == "" {
+		country = "TR"
+	}
+	p.LastCountry = country
 	p.VehicleRegistrationCountry = "RU"
-	p.Trips["TR"] = []Trip{{Entry: "2026-05-01", Exit: "2026-06-15"}, {Entry: "2026-09-20", Registered: false}}
-	p.CarTrips["TR"] = []Trip{{Entry: "2026-05-01", Exit: "2026-06-15"}, {Entry: "2026-09-20"}}
+	p.Trips[country] = []Trip{{Entry: "2026-05-01", Exit: "2026-06-15"}, {Entry: "2026-09-20", Registered: false}}
+	p.CarTrips[country] = []Trip{{Entry: "2026-05-01", Exit: "2026-06-15"}, {Entry: "2026-09-20"}}
 	s.SaveProfile(p)
 	s.NewProfile("Мария", "RU")
 

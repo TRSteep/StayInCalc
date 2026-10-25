@@ -96,9 +96,17 @@ type Registration struct {
 
 type VehicleRule struct {
 	Limits
-	Note   string `json:"note,omitempty"`
-	Manual bool   `json:"manual,omitempty"`
-	Source string `json:"source,omitempty"`
+	Note           string                             `json:"note,omitempty"`
+	Manual         bool                               `json:"manual,omitempty"`
+	Source         string                             `json:"source,omitempty"`
+	ByRegistration map[string]VehicleRegistrationRule `json:"by_registration,omitempty"`
+}
+
+type VehicleRegistrationRule struct {
+	Limits
+	MinDaysOutsideAfterLimit int    `json:"min_days_outside_after_limit,omitempty"`
+	Note                     string `json:"note,omitempty"`
+	Source                   string `json:"source,omitempty"`
 }
 
 func (c *Country) RuleFor(citizenship string) (*Rule, bool) {
@@ -162,6 +170,17 @@ func ParseCountries(data []byte) (*CountriesFile, error) {
 			return nil, fmt.Errorf("страна %s: нет ни одного правила", c.ID)
 		}
 		for j, r := range c.Rules {
+			for code, vehicle := range r.Vehicle.ByRegistration {
+				if len(code) != 2 || vehicle.MinDaysOutsideAfterLimit < 0 {
+					return nil, fmt.Errorf("страна %s: некорректное автомобильное правило для %s", c.ID, code)
+				}
+				if err := validateLimits(vehicle.Limits); err != nil {
+					return nil, err
+				}
+				if vehicle.MinDaysOutsideAfterLimit > 0 && vehicle.MaxConsecutive == 0 && vehicle.MaxConsecutiveMonths == 0 {
+					return nil, fmt.Errorf("страна %s: перерыв после срока требует лимит за въезд", c.ID)
+				}
+			}
 			previous := ""
 			for _, period := range r.History {
 				if _, ok := parseISO(period.Before); !ok || (previous != "" && period.Before <= previous) {
