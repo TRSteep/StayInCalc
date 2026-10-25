@@ -29,7 +29,11 @@ func TestUISnapshot(t *testing.T) {
 	a := test.NewApp()
 	u := newUI(a, s)
 	u.profileSel.SetSelected("Иван")
-	u.refEntry.SetText("08.10.2026")
+	refDate := os.Getenv("SNAPSHOT_DATE")
+	if refDate == "" {
+		refDate = "08.10.2026"
+	}
+	u.refEntry.SetText(refDate)
 	u.win.Resize(fyne.NewSize(1250, 760))
 	img := u.win.Canvas().Capture()
 	f, _ := os.Create(out)

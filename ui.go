@@ -638,13 +638,13 @@ func styleReportSegments(segments []widget.RichTextSegment) []widget.RichTextSeg
 				out = append(out, &widget.TextSegment{Text: " ", Style: widget.RichTextStyleParagraph})
 			}
 			if s.Style.SizeName == theme.SizeNameHeadingText {
-				const prefix = "Выехать не позднее: "
-				if date, ok := strings.CutPrefix(s.Text, prefix); ok {
+				label, date, ok := strings.Cut(s.Text, ": ")
+				if ok && (label == "Выехать не позднее" || label == "При въезде можно находиться до") {
 					labelStyle, dateStyle := s.Style, s.Style
 					labelStyle.Inline, dateStyle.Inline = true, true
 					labelStyle.ColorName = theme.ColorNameForeground
 					dateStyle.ColorName = theme.ColorNamePrimary
-					out = append(out, &widget.TextSegment{Text: prefix, Style: labelStyle}, &widget.TextSegment{Text: date, Style: dateStyle}, &widget.TextSegment{Style: widget.RichTextStyleParagraph})
+					out = append(out, &widget.TextSegment{Text: label + ": ", Style: labelStyle}, &widget.TextSegment{Text: date, Style: dateStyle}, &widget.TextSegment{Style: widget.RichTextStyleParagraph})
 					continue
 				}
 				s.Style.ColorName = theme.ColorNamePrimary

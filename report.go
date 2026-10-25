@@ -119,8 +119,8 @@ func stayDecision(b *strings.Builder, r Result, who string, cp *Cap) {
 			fmt.Fprintf(b, "# Выехать не позднее: %s\n\nЕщё **%d дн.** после %s. Причина: %s.\n\n",
 				fd(cp.Date), left, ref, cp.Reason)
 		default:
-			fmt.Fprintf(b, "При въезде %s можно находиться до\n\n# %s\n\nВключительно: **%d дн.** Причина: %s.\n\n",
-				ref, fd(cp.Date), left+1, cp.Reason)
+			fmt.Fprintf(b, "# При въезде можно находиться до: %s\n\nВъезд: **%s**. Включительно: **%d дн.** Причина: %s.\n\n",
+				fd(cp.Date), ref, left+1, cp.Reason)
 		}
 		if r.ForecastLimited || r.Unlimited {
 			fmt.Fprintf(b, "**%s:** в пределах расчёта до %s предел срока не найден.\n\n", cp.Alt, fd(r.LatestExit))
@@ -151,8 +151,8 @@ func stayDecision(b *strings.Builder, r Result, who string, cp *Cap) {
 			fmt.Fprintf(b, "⚠ Запланированный выезд %s позже допустимого!\n\n", fd(*r.PlannedExit))
 		}
 	case r.EarliestEntry == nil:
-		fmt.Fprintf(b, "При въезде %s можно находиться до\n\n# %s\n\nВключительно: **%d дн.** Причина: %s.\n\n",
-			ref, fd(r.LatestExit), r.DaysLeft()+1, r.LatestReason)
+		fmt.Fprintf(b, "# При въезде можно находиться до: %s\n\nВъезд: **%s**. Включительно: **%d дн.** Причина: %s.\n\n",
+			fd(r.LatestExit), ref, r.DaysLeft()+1, r.LatestReason)
 	}
 	if r.EarliestEntry != nil {
 		if r.EarlyForecastLimited {
