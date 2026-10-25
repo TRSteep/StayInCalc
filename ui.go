@@ -33,7 +33,7 @@ type UI struct {
 	refEntry    *widget.Entry
 	tripsBox    *fyne.Container
 	carBox      *fyne.Container
-	result      *widget.RichText
+	result      *fyne.Container
 }
 
 func runUI(a fyne.App, store *Store) {
@@ -43,7 +43,7 @@ func runUI(a fyne.App, store *Store) {
 func newUI(a fyne.App, store *Store) *UI {
 	u := &UI{app: a, store: store, refDate: today()}
 	u.win = a.NewWindow("Калькулятор пребывания")
-	u.win.Resize(fyne.NewSize(1150, 720))
+	u.win.Resize(fyne.NewSize(1360, 850))
 
 	cf, err := store.LoadCountries()
 	if err != nil {
@@ -141,11 +141,10 @@ func (u *UI) build() {
 			container.NewVScroll(u.carBox))),
 	)
 
-	u.result = widget.NewRichText()
-	u.result.Wrapping = fyne.TextWrapWord
+	u.result = container.NewVBox()
 
 	split := container.NewHSplit(tabs, container.NewVScroll(container.NewPadded(u.result)))
-	split.Offset = 0.5
+	split.Offset = 0.48
 
 	u.win.SetContent(container.NewBorder(top, nil, nil, nil, split))
 }
@@ -412,13 +411,15 @@ func (u *UI) tripRow(car bool, i int) fyne.CanvasObject {
 		widget.NewLabel("Въезд"), entryF,
 		widget.NewLabel("Выезд"), exitF,
 	}
+	details := []fyne.CanvasObject{}
 	if !car {
 		reg := widget.NewCheck("Регистрация", func(b bool) { get().Registered = b; changed() })
 		reg.Checked = t.Registered
-		items = append(items, reg)
+		details = append(details, reg)
 	}
-	items = append(items, sized(note, 140), del)
-	return container.NewHBox(items...)
+	items = append(items, del)
+	details = append(details, widget.NewLabel("Заметка:"))
+	return container.NewVBox(container.NewHBox(items...), container.NewBorder(nil, nil, container.NewHBox(details...), nil, note), widget.NewSeparator())
 }
 
 func (u *UI) addRow(car bool) {
@@ -561,5 +562,29 @@ func resetGap(r *Rule) int {
 
 func (u *UI) recalc() {
 	md := u.report()
-	u.result.ParseMarkdown(md)
+	u.result.RemoveAll()
+	for _, section := range strings.Split(md, "\n---\n") {
+		section = strings.TrimSpace(section)
+		title := ""
+		if strings.HasPrefix(section, "## ") {
+			if line, rest, ok := strings.Cut(section, "\n"); ok {
+				title, section = strings.TrimPrefix(line, "## "), strings.TrimSpace(rest)
+			}
+		}
+		body := widget.NewRichTextFromMarkdown(section)
+		body.Wrapping = fyne.TextWrapWord
+		bodyTheme := reportTheme{u.app.Settings().Theme()}
+		u.result.Add(widget.NewCard(title, "", container.NewPadded(container.NewThemeOverride(body, bodyTheme))))
+	}
+}
+
+// Крупная дата внутри карточки заметнее её заголовка; остальные размеры
+// и цвета наследуются из выбранной пользователем темы.
+type reportTheme struct{ fyne.Theme }
+
+func (t reportTheme) Size(name fyne.ThemeSizeName) float32 {
+	if name == theme.SizeNameHeadingText {
+		return 32
+	}
+	return t.Theme.Size(name)
 }
