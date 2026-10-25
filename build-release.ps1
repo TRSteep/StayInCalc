@@ -4,7 +4,7 @@ Set-Location -LiteralPath $PSScriptRoot
 $taskVersionMatch = [regex]::Match((Get-Content -LiteralPath 'version.go' -Raw), 'appVersion = "([0-9.]+)"')
 if (-not $taskVersionMatch.Success) { throw 'Cannot read appVersion from version.go' }
 $taskVersion = $taskVersionMatch.Groups[1].Value
-$taskName = "StayCalc-v$taskVersion-windows-amd64"
+$taskName = "StayInCalc-v$taskVersion-windows-amd64"
 $taskOutput = Join-Path $PSScriptRoot 'release'
 $taskStage = Join-Path $taskOutput $taskName
 if (Test-Path -LiteralPath $taskStage) { throw "Output already exists: $taskStage" }
@@ -17,7 +17,7 @@ if (-not $env:CC -and (Test-Path -LiteralPath 'C:\msys64\ucrt64\bin\gcc.exe')) {
     $env:PATH = 'C:\msys64\ucrt64\bin;' + $env:PATH
 }
 New-Item -ItemType Directory -Path (Join-Path $taskStage 'data') -Force | Out-Null
-go build -trimpath -buildvcs=false -ldflags '-H=windowsgui -s -w' -o (Join-Path $taskStage 'StayCalc.exe') .
+go build -trimpath -buildvcs=false -ldflags '-H=windowsgui -s -w' -o (Join-Path $taskStage 'StayInCalc.exe') .
 if ($LASTEXITCODE -ne 0) { throw 'Go build failed' }
 
 # Explicit allowlist: never copy profiles, settings, or the working data directory.

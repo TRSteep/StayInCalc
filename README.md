@@ -1,4 +1,7 @@
-# StayCalc — калькулятор пребывания в стране
+# StayInCalc — калькулятор пребывания в стране
+
+Ранее приложение называлось StayCalc. Для обновления используйте `StayInCalc.exe`;
+формат профилей и папка `data` рядом с EXE остаются прежними.
 
 Версия отображается в заголовке окна и задаётся константой `appVersion` в `version.go`.
 В блоке возвращения выделена дата, когда старые дни полностью выйдут из учитываемых
@@ -10,11 +13,11 @@ GUI-программа на Go (Fyne) для учёта дней пребыва�
 
 ## Запуск
 
-Готовые архивы доступны в [Releases](https://github.com/TRSteep/StayCalc/releases).
+Готовые архивы доступны в [Releases](https://github.com/TRSteep/StayInCalc/releases).
 Сборка релизного архива из исходников: `powershell -ExecutionPolicy Bypass -File .\build-release.ps1`
 (Go и MinGW-w64 GCC должны быть установлены). Результат и SHA-256 — в папке `release`.
 
-`StayCalc.exe` — данные хранятся в папке `data` рядом с exe:
+`StayInCalc.exe` — данные хранятся в папке `data` рядом с exe:
 
 ```
 data/
@@ -111,7 +114,7 @@ data/
 Нужны Go и gcc (MinGW/MSYS2 ucrt64), т.к. Fyne использует cgo:
 ```
 set CGO_ENABLED=1
-go build -ldflags "-H=windowsgui -s -w" -o StayCalc.exe .
+go build -ldflags "-H=windowsgui -s -w" -o StayInCalc.exe .
 go test .
 ```
 
@@ -128,4 +131,4 @@ windres -O coff -o rsrc_windows_amd64.syso assets/app.rc
 
 ## Git
 Папка `data/profiles/` (личные данные — даты поездок) исключена через `.gitignore`
-и в репозиторий не попадает. Её резервную копию делайте отдельно. Собранный `StayCalc.exe` тоже не хранится в git.
+и в репозиторий не попадает. Её резервную копию делайте отдельно. Собранный `StayInCalc.exe` тоже не хранится в git.

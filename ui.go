@@ -48,7 +48,7 @@ func runUI(a fyne.App, store *Store) {
 
 func newUI(a fyne.App, store *Store) *UI {
 	u := &UI{app: a, store: store, refDate: today()}
-	u.win = a.NewWindow("Калькулятор пребывания — v" + appVersion)
+	u.win = a.NewWindow("StayInCalc — Калькулятор пребывания — v" + appVersion)
 	u.win.Resize(fyne.NewSize(1360, 850))
 
 	cf, err := store.LoadCountries()
@@ -644,8 +644,8 @@ func (u *UI) recalc() {
 	}
 }
 
-const reportTitleSize fyne.ThemeSizeName = "staycalc.cardTitle"
-const reportCompactTitleSize fyne.ThemeSizeName = "staycalc.compactTitle"
+const reportTitleSize fyne.ThemeSizeName = "stayincalc.cardTitle"
+const reportCompactTitleSize fyne.ThemeSizeName = "stayincalc.compactTitle"
 
 // Акценты наследуют цвет выбранной темы и масштабируются вместе с интерфейсом.
 type reportTheme struct{ fyne.Theme }

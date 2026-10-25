@@ -1,4 +1,4 @@
-module github.com/TRSteep/StayCalc
+module github.com/TRSteep/StayInCalc
 
 go 1.24
 

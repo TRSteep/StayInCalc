@@ -27,7 +27,7 @@ func main() {
 	if err := store.Init(); err != nil {
 		log.Fatal(err)
 	}
-	a := app.NewWithID("local.staycalc")
+	a := app.NewWithID("local.stayincalc")
 	a.SetIcon(fyne.NewStaticResource("icon.png", iconPNG))
 	runUI(a, store)
 }
