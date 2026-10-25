@@ -48,7 +48,7 @@ func runUI(a fyne.App, store *Store) {
 
 func newUI(a fyne.App, store *Store) *UI {
 	u := &UI{app: a, store: store, refDate: today()}
-	u.win = a.NewWindow("Калькулятор пребывания")
+	u.win = a.NewWindow("Калькулятор пребывания — v" + appVersion)
 	u.win.Resize(fyne.NewSize(1360, 850))
 
 	cf, err := store.LoadCountries()
@@ -666,13 +666,13 @@ func styleReportSegments(segments []widget.RichTextSegment) []widget.RichTextSeg
 		case *widget.ParagraphSegment:
 			s.Texts = styleReportSegments(s.Texts)
 		case *widget.TextSegment:
-			if s.Text == "Возвращение на 14 дней или месяц" {
+			if s.Text == "Возвращение" {
 				// Непустой пробельный сегмент даёт видимую пустую строку в Fyne.
 				out = append(out, &widget.TextSegment{Text: " ", Style: widget.RichTextStyleParagraph})
 			}
 			if s.Style.SizeName == theme.SizeNameHeadingText {
 				label, date, ok := strings.Cut(s.Text, ": ")
-				if ok && (label == "Выехать не позднее" || label == "При въезде можно находиться до") {
+				if ok && (label == "Выехать не позднее" || label == "При въезде можно находиться до" || label == "Полное обнуление дней") {
 					labelStyle, dateStyle := s.Style, s.Style
 					labelStyle.Inline, dateStyle.Inline = true, true
 					labelStyle.ColorName = theme.ColorNameForeground

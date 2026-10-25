@@ -85,8 +85,74 @@ func planReturn(trips []Trip, rule *Rule, departure, notBefore time.Time, target
 	return nil
 }
 
+// fullResetDate — дата, к которой все дни прошлых поездок покинут учитываемые
+// окна, а ограниченные годовые счётчики въездов обнулятся. Это строже, чем дата,
+// когда уже можно провести полный срок: дни могут выпадать и во время поездки.
+// Будущие планы заменяются сценарием выезда в departure и отсутствия до въезда.
+func fullResetDate(trips []Trip, rule *Rule, departure, notBefore time.Time) time.Time {
+	date := notBefore
+	lim := rule.ForEntry(notBefore.Format(dateISO)).Limits
+	later := func(candidate time.Time) {
+		if candidate.After(date) {
+			date = candidate
+		}
+	}
+	var last time.Time
+	for _, trip := range trips {
+		entry, ok := parseISO(trip.Entry)
+		if !ok || entry.After(departure) {
+			continue
+		}
+		exit := departure
+		if actual, ok := parseISO(trip.Exit); ok && actual.Before(exit) {
+			exit = actual
+		}
+		if exit.After(last) {
+			last = exit
+		}
+		if lim.MaxInPeriod > 0 {
+			later(exit.AddDate(0, 0, lim.PeriodDays))
+		}
+		if lim.MaxPerYear > 0 {
+			if lim.YearMode == "rolling" {
+				later(exit.AddDate(0, 0, 365))
+			} else {
+				later(time.Date(exit.Year()+1, 1, 1, 0, 0, 0, 0, time.UTC))
+			}
+		}
+		if rule.VisaRun.MaxPerYear > 0 {
+			later(time.Date(entry.Year()+1, 1, 1, 0, 0, 0, 0, time.UTC))
+		}
+	}
+	if !last.IsZero() {
+		if rule.VisaRun.MinDaysOutside > 0 {
+			later(last.AddDate(0, 0, rule.VisaRun.MinDaysOutside+1))
+		} else {
+			later(last) // повторный въезд в день выезда допустим для счётчика
+		}
+	}
+	return date
+}
+
+// Сравниваем доступный непрерывный срок с новой поездкой без истории.
+// Полный срок может стать доступен ещё до выпадения всех прошлых дней.
+func firstEntryStayAvailable(trips []Trip, rule *Rule, departure, ref time.Time) bool {
+	entryRule := rule.ForEntry(ref.Format(dateISO))
+	if entryRule.Limits.unlimited() {
+		return !fullResetDate(trips, rule, departure, ref).After(ref)
+	}
+	fresh := evaluate(nil, entryRule.Limits, resetGap(rule), ref, rule)
+	if fresh.Error != nil || fresh.ForecastLimited || fresh.EntryBlocked {
+		return false
+	}
+	target := dayNum(fresh.LatestExit) - dayNum(ref) + 1
+	registered := entryRule.Registration.Required && entryRule.Registration.WithinDays > 0
+	plan := planReturn(trips, rule, departure, ref, target, registered)
+	return plan != nil && plan.Entry.Equal(ref)
+}
+
 func returnPlans(b *strings.Builder, trips []Trip, rule *Rule, r Result, cp *Cap) {
-	if r.Error != nil || (!r.EntryBlocked && !r.Overstay && (r.Unlimited || r.ForecastLimited) && cp == nil) {
+	if r.Error != nil {
 		return
 	}
 	// «Сегодня» — выбранная дата расчёта, в том числе при планировании.
@@ -103,11 +169,31 @@ func returnPlans(b *strings.Builder, trips []Trip, rule *Rule, r Result, cp *Cap
 			}
 		}
 	}
-	b.WriteString("### Возвращение на 14 дней или месяц\n\n")
+	b.WriteString("### Возвращение\n\n")
 	if r.InCountry {
 		fmt.Fprintf(b, "Если выехать сегодня, **%s**, и не совершать других поездок:\n\n", fd(departure))
 	} else {
 		fmt.Fprintf(b, "Вы вне страны. Варианты въезда начиная с **%s**:\n\n", fd(r.Ref))
+	}
+	reset := fullResetDate(trips, rule, departure, r.Ref)
+	fullStay := firstEntryStayAvailable(trips, rule, departure, r.Ref)
+	fmt.Fprintf(b, "# Полное обнуление дней: %s\n\n", fd(reset))
+	if !reset.After(r.Ref) {
+		b.WriteString("По заданным счётчикам лимиты пребывания уже действуют **как при первом въезде**.\n\n")
+	} else {
+		b.WriteString("К этой дате все дни прошлых поездок выйдут из учитываемых периодов, а ограниченные годовые счётчики въездов обнулятся. Лимиты будут действовать **как при первом въезде**, если до этой даты не совершать новых поездок. Доступные дни могут появляться постепенно раньше этой даты.\n\n")
+		if fullStay {
+			b.WriteString("Уже на дату расчёта новый въезд позволяет провести полный непрерывный срок **как при первом въезде**: старые дни успевают выпадать во время поездки.\n\n")
+		}
+	}
+	if rule.Registration.Required || rule.Registration.ExtendsStay {
+		b.WriteString("Условия регистрации и отдельного продления сохраняются; прежнее продление не переносится на новый въезд.\n\n")
+	}
+	if rule.VisaRequired {
+		b.WriteString("Дата восстановления счётчиков не заменяет действующую визу или иное основание въезда.\n\n")
+	}
+	if fullStay {
+		return
 	}
 	for _, target := range []int{14, 30} {
 		label := "14 дней"

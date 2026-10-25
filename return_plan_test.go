@@ -78,7 +78,7 @@ func TestReportCardOrderAndOptionalCar(t *testing.T) {
 	if strings.Contains(report, "## Автомобиль") {
 		t.Fatal("empty car card")
 	}
-	if !strings.Contains(report, "# Выехать не позднее: 30.01.2026") || !strings.Contains(report, "месяц (30 дней)") {
+	if !strings.Contains(report, "# Выехать не позднее: 30.01.2026") || !strings.Contains(report, "как при первом въезде") || strings.Contains(report, "месяц (30 дней)") {
 		t.Fatal(report)
 	}
 	u.cur.CarTrips["TEST"] = []Trip{{Entry: "2026-01-01"}}
