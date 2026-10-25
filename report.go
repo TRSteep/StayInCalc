@@ -17,6 +17,9 @@ func yesNo(b bool) string {
 
 func limitsText(l Limits) string {
 	var parts []string
+	if l.MaxConsecutiveMonths > 0 {
+		parts = append(parts, fmt.Sprintf("до %d календарных мес. за въезд", l.MaxConsecutiveMonths))
+	}
 	if l.MaxConsecutive > 0 {
 		parts = append(parts, fmt.Sprintf("до %d дн. подряд", l.MaxConsecutive))
 	}
@@ -207,6 +210,22 @@ func (u *UI) report() string {
 		fmt.Fprintf(&b, "Для гражданства «%s» в countries.json нет правил. Добавьте правило с этим кодом или \"*\".\n", u.cur.Citizenship)
 		return b.String()
 	}
+	rawRule := rule
+	trips := u.cur.Trips[u.country.ID]
+	var curTrip *Trip
+	refD := dayNum(u.refDate)
+	for i := range trips {
+		en, valid := parseISO(trips[i].Entry)
+		ex, hasEx := parseISO(trips[i].Exit)
+		if valid && dayNum(en) <= refD && (!hasEx || dayNum(ex) >= refD) && (curTrip == nil || trips[i].Entry > curTrip.Entry) {
+			curTrip = &trips[i]
+		}
+	}
+	entryDate := u.refDate.Format(dateISO)
+	if curTrip != nil {
+		entryDate = curTrip.Entry
+	}
+	rule = rawRule.ForEntry(entryDate)
 
 	// --- Правила ---
 	b.WriteString("## Общая информация\n\n")
@@ -224,13 +243,13 @@ func (u *UI) report() string {
 	vr := rule.VisaRun
 	switch {
 	case vr.Allowed && vr.MinDaysOutside == 0:
-		b.WriteString("- Визаран: работает (можно въехать в день выезда)")
+		b.WriteString("- Повторный въезд: новый отсчёт лимита за въезд; допуск решает пограничная служба")
 	case vr.Allowed:
 		fmt.Fprintf(&b, "- Визаран: работает (вне страны минимум %d дн.)", vr.MinDaysOutside)
 	case vr.MinDaysOutside > 0:
 		fmt.Fprintf(&b, "- Визаран: не обнуляет срок, пока не проведено %d дн. вне страны", vr.MinDaysOutside)
 	default:
-		b.WriteString("- Визаран: не обнуляет срок")
+		b.WriteString("- Выезд не обнуляет общий лимит дней")
 	}
 	if vr.MaxPerYear > 0 {
 		fmt.Fprintf(&b, "; не более %d въездов в год", vr.MaxPerYear)
@@ -241,7 +260,9 @@ func (u *UI) report() string {
 	b.WriteString("\n")
 
 	reg := rule.Registration
-	if reg.Required {
+	if reg.Manual {
+		b.WriteString("- Регистрация: условия требуют отдельной проверки")
+	} else if reg.Required {
 		fmt.Fprintf(&b, "- Регистрация: **обязательна**")
 		if reg.WithinDays > 0 {
 			fmt.Fprintf(&b, " в течение %d дн. после въезда (без неё — не более %d дн. с даты въезда)", reg.WithinDays, reg.WithinDays)
@@ -268,20 +289,7 @@ func (u *UI) report() string {
 	// --- Человек ---
 	general := b.String()
 	b.Reset()
-	trips := u.cur.Trips[u.country.ID]
 	lim := rule.Limits
-	var curTrip *Trip
-	refD := dayNum(u.refDate)
-	for i := range trips {
-		en, ok := parseISO(trips[i].Entry)
-		if !ok || dayNum(en) > refD {
-			continue
-		}
-		ex, hasEx := parseISO(trips[i].Exit)
-		if (!hasEx || dayNum(ex) >= refD) && (curTrip == nil || trips[i].Entry > curTrip.Entry) {
-			curTrip = &trips[i]
-		}
-	}
 	registered := curTrip != nil && curTrip.Registered
 	regLim := lim
 	if reg.ExtendsStay {
@@ -313,12 +321,12 @@ func (u *UI) report() string {
 	}
 
 	fmt.Fprintf(&b, "## %s\n\n", context)
-	r := evaluate(trips, lim, resetGap(rule), u.refDate, rule)
+	r := evaluate(trips, lim, resetGap(rule), u.refDate, rawRule)
 	stayDecision(&b, r, "вы", regCap)
 	if rule.VisaRequired {
 		b.WriteString("_Нужна виза: рассчитанный срок не может превышать срок, указанный в визе._\n\n")
 	}
-	returnPlans(&b, trips, rule, r, regCap)
+	returnPlans(&b, trips, rawRule, r, regCap)
 	fmt.Fprintf(&b, "\n---\n\n## Пребывание на %s\n\n", fd(u.refDate))
 	if r.Error != nil {
 		b.WriteString("Исправьте даты поездок для отображения счётчиков.\n\n")
@@ -360,8 +368,26 @@ func (u *UI) report() string {
 	if hasCar {
 		b.WriteString("\n---\n\n## Автомобиль\n\n")
 		cr := Evaluate(carTrips, vl, 0, u.refDate) // срок машины идёт с каждого пересечения границы
-		stayBlock(&b, cr, vl, "машина", nil)
-		fmt.Fprintf(&b, "Временный ввоз: %s.\n\n%s\n", limitsText(vl), rule.Vehicle.Note)
+		if rule.Vehicle.Manual {
+			b.WriteString("**Срок автомобиля требует проверки по документам ввоза.** Автоматическая дата выезда не определяется.\n\n")
+			if cr.Error != nil {
+				fmt.Fprintf(&b, "Ошибка данных: %s.\n\n", cr.Error)
+			} else {
+				if cr.InCountry {
+					fmt.Fprintf(&b, "- Машина в стране с %s (%d-й день поездки).\n", fd(cr.CurrentEntry), dayNum(cr.Ref)-dayNum(cr.CurrentEntry)+1)
+				} else {
+					fmt.Fprintf(&b, "- На %s машина вне страны.\n", fd(cr.Ref))
+				}
+				fmt.Fprintf(&b, "- Учтено дней в %d году: %d.\n\n", cr.Ref.Year(), cr.Used.InYear)
+			}
+		} else {
+			stayBlock(&b, cr, vl, "машина", nil)
+			fmt.Fprintf(&b, "Временный ввоз: %s.\n\n", limitsText(vl))
+		}
+		fmt.Fprintf(&b, "%s\n", rule.Vehicle.Note)
+		if rule.Vehicle.Source != "" {
+			fmt.Fprintf(&b, "\nИсточник: %s\n", rule.Vehicle.Source)
+		}
 	}
 	b.WriteString("\n---\n\n" + general)
 	return b.String()

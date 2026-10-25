@@ -115,6 +115,12 @@ func (p *presence) usage(d int, lim Limits, resetGap int) Usage {
 // broken возвращает описание нарушенного ограничения на день d (пусто — всё в порядке).
 func (p *presence) broken(d int, lim Limits, resetGap int) string {
 	u := p.usage(d, lim, resetGap)
+	if lim.MaxConsecutiveMonths > 0 {
+		_, start := p.consecutive(d, resetGap)
+		if d >= dayNum(dayTime(start).AddDate(0, lim.MaxConsecutiveMonths, 0)) {
+			return "максимум календарных месяцев подряд"
+		}
+	}
 	switch {
 	case lim.MaxConsecutive > 0 && u.Consecutive > lim.MaxConsecutive:
 		return "максимум дней подряд"
@@ -127,7 +133,7 @@ func (p *presence) broken(d int, lim Limits, resetGap int) string {
 }
 
 func (l Limits) unlimited() bool {
-	return l.MaxConsecutive == 0 && l.MaxInPeriod == 0 && l.MaxPerYear == 0
+	return l.MaxConsecutiveMonths == 0 && l.MaxConsecutive == 0 && l.MaxInPeriod == 0 && l.MaxPerYear == 0
 }
 
 type Violation struct {
@@ -260,11 +266,12 @@ func evaluate(trips []Trip, lim Limits, resetGap int, ref time.Time, rule *Rule)
 				for i := len(ivs) - 1; i >= 0; i-- {
 					v := ivs[i]
 					if v.from <= d && v.to >= d {
-						historyLimits = rule.Limits
-						if v.trip.Registered && rule.Registration.ExtendsStay {
-							historyLimits = historyLimits.Merge(rule.Registration.Extended)
+						entryRule := rule.ForEntry(v.trip.Entry)
+						historyLimits = entryRule.Limits
+						if v.trip.Registered && entryRule.Registration.ExtendsStay {
+							historyLimits = historyLimits.Merge(entryRule.Registration.Extended)
 						}
-						reg := rule.Registration
+						reg := entryRule.Registration
 						if reg.Required && reg.WithinDays > 0 && !v.trip.Registered && d-v.from >= reg.WithinDays {
 							why = "срок без регистрации"
 						}
@@ -337,7 +344,7 @@ func evaluate(trips []Trip, lim Limits, resetGap int, ref time.Time, rule *Rule)
 		forecastLimits := lim
 		if rule != nil && start > refD {
 			// Новый въезд не наследует продление предыдущей поездки.
-			forecastLimits = rule.Limits
+			forecastLimits = rule.ForEntry(dayTime(start).Format(dateISO)).Limits
 		}
 		if rule != nil && rule.VisaRun.MaxPerYear > 0 && (!res.InCountry || start > refD) {
 			n := 0

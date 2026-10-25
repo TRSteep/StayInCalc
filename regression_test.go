@@ -170,11 +170,11 @@ func TestDuplicateProfileSelection(t *testing.T) {
 		t.Fatal(u.profileSel.Options)
 	}
 	u.reloadProfiles(p2.file)
-	if u.cur.file != p2.file || u.citizenship.Text != "BY" {
+	if u.cur.file != p2.file || u.citizenship.Selected != citizenshipLabel("BY") {
 		t.Fatal("second profile not selected")
 	}
 	u.reloadProfiles(p1.file)
-	if u.cur.file != p1.file || u.citizenship.Text != "RU" {
+	if u.cur.file != p1.file || u.citizenship.Selected != citizenshipLabel("RU") {
 		t.Fatal("first profile not selected")
 	}
 }
@@ -195,7 +195,7 @@ func TestRestoresLastOpenedProfile(t *testing.T) {
 	u := newUI(test.NewApp(), s)
 	u.reloadProfiles(second.file)
 	reopened := newUI(test.NewApp(), s)
-	if reopened.cur == nil || reopened.cur.file != second.file || reopened.citizenship.Text != "BY" {
+	if reopened.cur == nil || reopened.cur.file != second.file || reopened.citizenship.Selected != citizenshipLabel("BY") {
 		t.Fatal("last selected profile was not restored")
 	}
 	if err := s.DeleteProfile(second); err != nil {

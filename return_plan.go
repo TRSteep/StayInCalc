@@ -21,16 +21,6 @@ func planReturn(trips []Trip, rule *Rule, departure, notBefore time.Time, target
 	if target < 1 || validateTrips(trips) != nil {
 		return nil
 	}
-	lim := rule.Limits
-	if registered && rule.Registration.ExtendsStay {
-		lim = lim.Merge(rule.Registration.Extended)
-	}
-	if validateLimits(lim) != nil {
-		return nil
-	}
-	if !registered && rule.Registration.Required && rule.Registration.WithinDays > 0 && target > rule.Registration.WithinDays {
-		return nil
-	}
 	end := dayNum(departure)
 	searchStart := max(end, dayNum(notBefore))
 	first := end
@@ -56,6 +46,17 @@ func planReturn(trips []Trip, rule *Rule, departure, notBefore time.Time, target
 		}
 	}
 	for entry := searchStart; entry <= searchStart+horizonDays; entry++ {
+		entryRule := rule.ForEntry(dayTime(entry).Format(dateISO))
+		lim := entryRule.Limits
+		if registered && entryRule.Registration.ExtendsStay {
+			lim = lim.Merge(entryRule.Registration.Extended)
+		}
+		if validateLimits(lim) != nil {
+			return nil
+		}
+		if !registered && entryRule.Registration.Required && entryRule.Registration.WithinDays > 0 && target > entryRule.Registration.WithinDays {
+			continue
+		}
 		if rule.VisaRun.MaxPerYear > 0 {
 			count := 1 // планируемый въезд
 			for _, trip := range history {

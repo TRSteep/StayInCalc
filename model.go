@@ -44,18 +44,38 @@ type Rule struct {
 	Registration Registration `json:"registration"`
 	Vehicle      VehicleRule  `json:"vehicle"`
 
-	Source  string `json:"source,omitempty"`
-	Updated string `json:"updated,omitempty"`
-	Notes   string `json:"notes,omitempty"`
+	Source  string       `json:"source,omitempty"`
+	Updated string       `json:"updated,omitempty"`
+	Notes   string       `json:"notes,omitempty"`
+	History []RulePeriod `json:"history,omitempty"`
+}
+
+// RulePeriod сохраняет условия, предоставленные при въезде до смены режима.
+type RulePeriod struct {
+	Before       string       `json:"before"`
+	Limits       Limits       `json:"limits"`
+	Registration Registration `json:"registration"`
+}
+
+func (r *Rule) ForEntry(entry string) *Rule {
+	copy := *r
+	for _, period := range r.History {
+		if entry < period.Before {
+			copy.Limits, copy.Registration = period.Limits, period.Registration
+			break
+		}
+	}
+	return &copy
 }
 
 // Limits — числовые ограничения. 0 означает «не ограничено».
 type Limits struct {
-	MaxConsecutive int    `json:"max_consecutive"` // макс. дней подряд за один въезд
-	MaxInPeriod    int    `json:"max_in_period"`   // макс. дней в скользящем периоде...
-	PeriodDays     int    `json:"period_days"`     // ...длиной period_days (например, 90 из 180)
-	MaxPerYear     int    `json:"max_per_year"`    // макс. дней в году
-	YearMode       string `json:"year_mode"`       // "calendar" — календарный год, "rolling" — последние 365 дней
+	MaxConsecutiveMonths int    `json:"max_consecutive_months,omitempty"`
+	MaxConsecutive       int    `json:"max_consecutive"` // макс. дней подряд за один въезд
+	MaxInPeriod          int    `json:"max_in_period"`   // макс. дней в скользящем периоде...
+	PeriodDays           int    `json:"period_days"`     // ...длиной period_days (например, 90 из 180)
+	MaxPerYear           int    `json:"max_per_year"`    // макс. дней в году
+	YearMode             string `json:"year_mode"`       // "calendar" — календарный год, "rolling" — последние 365 дней
 }
 
 type VisaRun struct {
@@ -66,6 +86,7 @@ type VisaRun struct {
 }
 
 type Registration struct {
+	Manual      bool   `json:"manual,omitempty"`
 	Required    bool   `json:"required"`
 	WithinDays  int    `json:"within_days"`  // в течение скольких дней после въезда
 	ExtendsStay bool   `json:"extends_stay"` // увеличивает ли регистрация срок пребывания
@@ -75,7 +96,9 @@ type Registration struct {
 
 type VehicleRule struct {
 	Limits
-	Note string `json:"note,omitempty"`
+	Note   string `json:"note,omitempty"`
+	Manual bool   `json:"manual,omitempty"`
+	Source string `json:"source,omitempty"`
 }
 
 func (c *Country) RuleFor(citizenship string) (*Rule, bool) {
@@ -100,6 +123,9 @@ func (c *Country) RuleFor(citizenship string) (*Rule, bool) {
 
 // Merge накладывает ненулевые значения o поверх l.
 func (l Limits) Merge(o Limits) Limits {
+	if o.MaxConsecutiveMonths > 0 {
+		l.MaxConsecutiveMonths = o.MaxConsecutiveMonths
+	}
 	if o.MaxConsecutive > 0 {
 		l.MaxConsecutive = o.MaxConsecutive
 	}
@@ -136,6 +162,19 @@ func ParseCountries(data []byte) (*CountriesFile, error) {
 			return nil, fmt.Errorf("страна %s: нет ни одного правила", c.ID)
 		}
 		for j, r := range c.Rules {
+			previous := ""
+			for _, period := range r.History {
+				if _, ok := parseISO(period.Before); !ok || (previous != "" && period.Before <= previous) {
+					return nil, fmt.Errorf("страна %s: history.before должны быть корректными датами по возрастанию", c.ID)
+				}
+				previous = period.Before
+				if err := validateLimits(period.Limits); err != nil {
+					return nil, fmt.Errorf("страна %s, история: %w", c.ID, err)
+				}
+				if err := validateLimits(period.Limits.Merge(period.Registration.Extended)); err != nil {
+					return nil, err
+				}
+			}
 			if len(r.Citizenships) == 0 {
 				return nil, fmt.Errorf("страна %s, правило №%d: пустой список citizenships", c.ID, j+1)
 			}
@@ -148,7 +187,7 @@ func ParseCountries(data []byte) (*CountriesFile, error) {
 				}
 			}
 			ext := r.Registration.Extended
-			if ext.MaxConsecutive < 0 || ext.MaxInPeriod < 0 || ext.PeriodDays < 0 || ext.MaxPerYear < 0 {
+			if ext.MaxConsecutiveMonths < 0 || ext.MaxConsecutive < 0 || ext.MaxInPeriod < 0 || ext.PeriodDays < 0 || ext.MaxPerYear < 0 {
 				return nil, fmt.Errorf("страна %s: лимиты продления не могут быть отрицательными", c.ID)
 			}
 			for _, ym := range []string{r.YearMode, r.Vehicle.YearMode, r.Registration.Extended.YearMode} {
@@ -162,7 +201,10 @@ func ParseCountries(data []byte) (*CountriesFile, error) {
 }
 
 func validateLimits(l Limits) error {
-	if l.MaxConsecutive < 0 || l.MaxInPeriod < 0 || l.PeriodDays < 0 || l.MaxPerYear < 0 {
+	if l.YearMode != "" && l.YearMode != "calendar" && l.YearMode != "rolling" {
+		return errors.New("некорректный year_mode")
+	}
+	if l.MaxConsecutiveMonths < 0 || l.MaxConsecutive < 0 || l.MaxInPeriod < 0 || l.PeriodDays < 0 || l.MaxPerYear < 0 {
 		return errors.New("лимиты не могут быть отрицательными")
 	}
 	if (l.MaxInPeriod > 0) != (l.PeriodDays > 0) {

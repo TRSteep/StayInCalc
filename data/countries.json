@@ -1,13 +1,40 @@
 {
-  "version": "1",
-  "comment": "Правила пребывания. registration.within_days при required=true — сколько дней с даты въезда можно находиться без регистрации. Значения — ПРИМЕРЫ, проверьте их по официальным источникам перед использованием. 0 = не ограничено. Дни считаются включительно (день въезда и день выезда — дни пребывания). year_mode: calendar — календарный год, rolling — последние 365 дней. Правило выбирается по гражданству профиля; \"*\" — для всех остальных.",
+  "version": "2",
+  "comment": "Правила РФ проверены 25.10.2026 для обычного паспорта и кратких поездок; источники и ограничения модели указаны в RULES_RU.md. Другие гражданства — непроверенные примеры. 0 = нет заданного числового лимита. manual=true означает отдельную проверку условий, а не отсутствие ограничений. history выбирает условия по дате въезда.",
   "countries": [
     {
       "id": "SCHENGEN",
       "name": "Шенгенская зона",
       "rules": [
         {
-          "citizenships": ["RU", "BY"],
+          "citizenships": [
+            "RU"
+          ],
+          "visa_required": true,
+          "max_in_period": 90,
+          "period_days": 180,
+          "visa_run": {
+            "allowed": false,
+            "note": "Выезд не обнуляет 90/180. Повторный въезд должен разрешаться визой и правилами конкретной страны."
+          },
+          "registration": {
+            "manual": true,
+            "note": "Учёт по месту проживания регулируется конкретной страной."
+          },
+          "source": "https://home-affairs.ec.europa.eu/policies/schengen/border-crossing/short-stay-calculator_en",
+          "updated": "2026-10-25",
+          "notes": "Обычный паспорт РФ, краткосрочная поездка. Общий счётчик всей зоны; срок и число въездов в визе могут быть меньше. Национальные ограничения на въезд проверяются отдельно.",
+          "visa_note": "Нужна действующая виза или иное основание въезда. Само наличие остатка дней не даёт права въезда.",
+          "vehicle": {
+            "manual": true,
+            "note": "Шенгенская и таможенная территории не совпадают. Для автомобилей с регистрацией РФ действуют ограничения ЕС и исключения; общий расчёт 183/365 неприменим.",
+            "source": "https://finance.ec.europa.eu/system/files/2024-01/faqs-sanctions-russia-consolidated_en.pdf"
+          }
+        },
+        {
+          "citizenships": [
+            "BY"
+          ],
           "visa_required": true,
           "visa_note": "Нужна шенгенская виза; срок по визе не может превышать указанный в ней.",
           "max_consecutive": 90,
@@ -15,23 +42,48 @@
           "period_days": 180,
           "max_per_year": 0,
           "year_mode": "calendar",
-          "visa_run": { "allowed": false, "min_days_outside": 0, "max_per_year": 0, "note": "Выезд не обнуляет правило 90/180." },
-          "registration": { "required": false, "within_days": 0, "extends_stay": false, "extended": {} },
-          "vehicle": { "max_consecutive": 0, "max_in_period": 183, "period_days": 365, "max_per_year": 0, "year_mode": "rolling", "note": "Временный ввоз ТС: до 6 месяцев в течение 12 месяцев." },
+          "visa_run": {
+            "allowed": false,
+            "min_days_outside": 0,
+            "max_per_year": 0,
+            "note": "Выезд не обнуляет правило 90/180."
+          },
+          "registration": {
+            "required": false,
+            "within_days": 0,
+            "extends_stay": false,
+            "extended": {}
+          },
+          "vehicle": {
+            "max_consecutive": 0,
+            "max_in_period": 183,
+            "period_days": 365,
+            "max_per_year": 0,
+            "year_mode": "rolling",
+            "note": "Временный ввоз ТС: до 6 месяцев в течение 12 месяцев."
+          },
           "source": "",
           "updated": "",
           "notes": "Пример. Проверьте актуальность."
         },
         {
-          "citizenships": ["*"],
+          "citizenships": [
+            "*"
+          ],
           "visa_required": false,
           "max_consecutive": 90,
           "max_in_period": 90,
           "period_days": 180,
           "year_mode": "calendar",
-          "visa_run": { "allowed": false },
+          "visa_run": {
+            "allowed": false
+          },
           "registration": {},
-          "vehicle": { "max_in_period": 183, "period_days": 365, "year_mode": "rolling" },
+          "vehicle": {
+            "max_in_period": 183,
+            "period_days": 365,
+            "year_mode": "rolling"
+          },
           "notes": "Для безвизовых стран — 90/180. Проверьте, нужна ли виза для вашего гражданства."
         }
       ]
@@ -41,16 +93,61 @@
       "name": "Грузия",
       "rules": [
         {
-          "citizenships": ["RU", "BY", "KZ", "UA", "AM"],
+          "citizenships": [
+            "RU"
+          ],
+          "visa_required": false,
+          "max_consecutive_months": 12,
+          "visa_run": {
+            "allowed": true,
+            "note": "Новый въезд и срок по штампу определяет пограничная служба; повторный допуск не гарантирован."
+          },
+          "registration": {
+            "manual": true,
+            "note": "Условия адресного учёта и длительного проживания проверяются отдельно."
+          },
+          "source": "https://matsne.gov.ge/en/document/view/2867361",
+          "updated": "2026-10-25",
+          "notes": "Без визы один полный год. Рассчитывается как 12 календарных месяцев, включая високосный год. Нужны действительные документы; трудовой/резидентский статус проверяется отдельно.",
+          "vehicle": {
+            "manual": true,
+            "note": "Для иностранного автомобиля срок свыше 90 дней связан с регистрационными/таможенными процедурами. 90 дней — не универсальная дата обязательного вывоза.",
+            "source": "https://sa.gov.ge/faq"
+          }
+        },
+        {
+          "citizenships": [
+            "BY",
+            "KZ",
+            "UA",
+            "AM"
+          ],
           "visa_required": false,
           "max_consecutive": 365,
           "max_in_period": 0,
           "period_days": 0,
           "max_per_year": 0,
           "year_mode": "calendar",
-          "visa_run": { "allowed": true, "min_days_outside": 0, "max_per_year": 0, "note": "После выезда срок начинается заново." },
-          "registration": { "required": false, "within_days": 0, "extends_stay": false, "extended": {} },
-          "vehicle": { "max_consecutive": 90, "max_in_period": 0, "period_days": 0, "max_per_year": 0, "year_mode": "calendar", "note": "Пример: срок временного ввоза уточните на таможне." },
+          "visa_run": {
+            "allowed": true,
+            "min_days_outside": 0,
+            "max_per_year": 0,
+            "note": "После выезда срок начинается заново."
+          },
+          "registration": {
+            "required": false,
+            "within_days": 0,
+            "extends_stay": false,
+            "extended": {}
+          },
+          "vehicle": {
+            "max_consecutive": 90,
+            "max_in_period": 0,
+            "period_days": 0,
+            "max_per_year": 0,
+            "year_mode": "calendar",
+            "note": "Пример: срок временного ввоза уточните на таможне."
+          },
           "notes": "Пример. Проверьте актуальность."
         }
       ]
@@ -60,17 +157,26 @@
       "name": "Турция",
       "rules": [
         {
-          "citizenships": ["RU"],
+          "citizenships": [
+            "RU"
+          ],
           "visa_required": false,
           "max_consecutive": 60,
           "max_in_period": 90,
           "period_days": 180,
-          "max_per_year": 0,
-          "year_mode": "calendar",
-          "visa_run": { "allowed": true, "min_days_outside": 0, "max_per_year": 0, "note": "Повторный въезд возможен, но действует 90/180." },
-          "registration": { "required": false, "within_days": 0, "extends_stay": false, "extended": {} },
-          "vehicle": { "max_consecutive": 0, "max_in_period": 183, "period_days": 365, "max_per_year": 0, "year_mode": "rolling", "note": "Пример: до 6 месяцев в течение 12 месяцев." },
-          "notes": "Пример. Проверьте актуальность."
+          "visa_run": {
+            "allowed": true,
+            "note": "Новый въезд и срок по штампу определяет пограничная служба; повторный допуск не гарантирован."
+          },
+          "registration": {},
+          "source": "https://www.mfa.gov.tr/visa-information-for-foreigners.en.mfa ; https://www.mfa.gov.tr/general-information-about-turkish-visas.en.mfa",
+          "updated": "2026-10-25",
+          "notes": "Обычный паспорт РФ: туризм/деловая поездка. До 60 дней за въезд, суммарно 90 дней за любые 180 дней.",
+          "vehicle": {
+            "manual": true,
+            "note": "Срок зависит от разрешённого пребывания владельца, ВНЖ и проживания вне Турции не менее 185 дней за предшествующий год. Для иностранца без ВНЖ — до 90/180, с ВНЖ возможно до 730 дней. Срок в документах ввоза приоритетен; визаран не даёт новые 730 дней.",
+            "source": "https://www.mfa.gov.tr/araclarla-ilgili-hususlar.en.mfa"
+          }
         }
       ]
     },
@@ -79,22 +185,108 @@
       "name": "Таиланд",
       "rules": [
         {
-          "citizenships": ["RU", "BY", "KZ"],
+          "citizenships": [
+            "RU"
+          ],
+          "visa_required": false,
+          "max_consecutive": 30,
+          "visa_run": {
+            "allowed": true,
+            "note": "Новый въезд и срок по штампу определяет пограничная служба; повторный допуск не гарантирован."
+          },
+          "registration": {
+            "required": true,
+            "note": "TM30 подаёт принимающая сторона в течение 24 часов. Это уведомление, не продление срока пребывания."
+          },
+          "source": "https://moscow.thaiembassy.org/en/publicservice/revision-of-thailand-s-visa-exemption-and-visa-on-arrival-schemes?cate=5d843b6a15e39c1abc005152&menu=5d843dbb15e39c1abc00583c",
+          "updated": "2026-10-25",
+          "notes": "С 15.09.2026 для обычного паспорта РФ — до 30 дней по двустороннему соглашению. Для более ранних въездов сохраняется предоставленный при въезде срок. Универсальный лимит двух въездов в год убран: ограничения зависят от режима и способа въезда.",
+          "history": [
+            {
+              "before": "2023-11-01",
+              "limits": {
+                "max_consecutive": 30
+              },
+              "registration": {
+                "required": true,
+                "note": "TM30 подаёт принимающая сторона в течение 24 часов. Это уведомление, не продление срока пребывания."
+              }
+            },
+            {
+              "before": "2024-05-01",
+              "limits": {
+                "max_consecutive": 90
+              },
+              "registration": {
+                "required": true,
+                "note": "TM30 подаёт принимающая сторона в течение 24 часов. Это уведомление, не продление срока пребывания."
+              }
+            },
+            {
+              "before": "2024-07-15",
+              "limits": {
+                "max_consecutive": 60
+              },
+              "registration": {
+                "required": true,
+                "note": "TM30 подаёт принимающая сторона в течение 24 часов. Это уведомление, не продление срока пребывания."
+              }
+            },
+            {
+              "before": "2026-09-15",
+              "limits": {
+                "max_consecutive": 60
+              },
+              "registration": {
+                "required": true,
+                "extends_stay": true,
+                "extended": {
+                  "max_consecutive": 90
+                },
+                "note": "Для прежнего режима 60 дней отметка означает одобренное продление на срок до 30 дней, а не только TM30. Решение принимает иммиграционная служба."
+              }
+            }
+          ],
+          "vehicle": {
+            "manual": true,
+            "note": "Нужны разрешение и временный ввоз; срок назначает таможня с учётом миграционного разрешения. Универсальный срок 30 дней для любого способа ввоза не подтверждён.",
+            "source": "https://www.customs.go.th/content_with_menu1.php?ini_content=individual_F01_160909_01_01&ini_menu=menu_individual_submenu_02&lang=en&left_menu=menu_individual_submenu_02_160421_03_160922_02"
+          }
+        },
+        {
+          "citizenships": [
+            "BY",
+            "KZ"
+          ],
           "visa_required": false,
           "max_consecutive": 60,
           "max_in_period": 0,
           "period_days": 0,
           "max_per_year": 0,
           "year_mode": "calendar",
-          "visa_run": { "allowed": true, "min_days_outside": 0, "max_per_year": 2, "note": "Число безвизовых въездов по суше ограничено." },
+          "visa_run": {
+            "allowed": true,
+            "min_days_outside": 0,
+            "max_per_year": 2,
+            "note": "Число безвизовых въездов по суше ограничено."
+          },
           "registration": {
             "required": false,
             "within_days": 0,
             "extends_stay": true,
-            "extended": { "max_consecutive": 90 },
+            "extended": {
+              "max_consecutive": 90
+            },
             "note": "Отметка «Регистрация» = продление в иммиграционном офисе на +30 дней. Уведомление TM30 (в течение 24 ч) подаёт арендодатель/отель."
           },
-          "vehicle": { "max_consecutive": 30, "max_in_period": 0, "period_days": 0, "max_per_year": 0, "year_mode": "calendar", "note": "Пример: временный ввоз 30 дней, возможно продление." },
+          "vehicle": {
+            "max_consecutive": 30,
+            "max_in_period": 0,
+            "period_days": 0,
+            "max_per_year": 0,
+            "year_mode": "calendar",
+            "note": "Пример: временный ввоз 30 дней, возможно продление."
+          },
           "notes": "Пример. Проверьте актуальность."
         }
       ]
@@ -104,16 +296,61 @@
       "name": "Казахстан",
       "rules": [
         {
-          "citizenships": ["RU", "BY", "AM", "KG"],
+          "citizenships": [
+            "RU"
+          ],
+          "visa_required": false,
+          "max_in_period": 90,
+          "period_days": 180,
+          "visa_run": {
+            "allowed": false,
+            "note": "Выезд не обнуляет 90/180."
+          },
+          "registration": {
+            "required": true,
+            "note": "Принимающая сторона уведомляет МВД в течение трёх рабочих дней. Это не регистрация-продление на 30+60 дней."
+          },
+          "source": "https://www.gov.kz/org/migration/press/news/details/494569 ; https://www.gov.kz/org/qriim/documents/details/366730?directionId=53&lang=ru",
+          "updated": "2026-10-25",
+          "notes": "Гражданин РФ (ЕАЭС): до 90 дней в течение 180 дней без РВП. Уведомление о прибытии не меняет этот лимит; для длительного проживания требуется отдельное основание.",
+          "vehicle": {
+            "manual": true,
+            "note": "Ст. 65 закона «О дорожном движении» устанавливает до одного года для соответствующего международного движения. Применимость зависит от владельца, ВНЖ, регистрации ТС и таможенного статуса ЕАЭС. Автоматическое обнуление годового срока при каждом визаране не подтверждается.",
+            "source": "https://adilet.zan.kz/rus/docs/Z1400000194"
+          }
+        },
+        {
+          "citizenships": [
+            "BY",
+            "AM",
+            "KG"
+          ],
           "visa_required": false,
           "max_consecutive": 0,
           "max_in_period": 90,
           "period_days": 180,
           "max_per_year": 0,
           "year_mode": "calendar",
-          "visa_run": { "allowed": false, "min_days_outside": 0, "max_per_year": 0 },
-          "registration": { "required": true, "within_days": 30, "extends_stay": true, "extended": {}, "note": "Для граждан ЕАЭС." },
-          "vehicle": { "max_consecutive": 365, "max_in_period": 0, "period_days": 0, "max_per_year": 0, "year_mode": "calendar", "note": "До 1 года с момента пересечения госграницы РК (п. 2 ст. 65 Закона РК «О дорожном движении»)." },
+          "visa_run": {
+            "allowed": false,
+            "min_days_outside": 0,
+            "max_per_year": 0
+          },
+          "registration": {
+            "required": true,
+            "within_days": 30,
+            "extends_stay": true,
+            "extended": {},
+            "note": "Для граждан ЕАЭС."
+          },
+          "vehicle": {
+            "max_consecutive": 365,
+            "max_in_period": 0,
+            "period_days": 0,
+            "max_per_year": 0,
+            "year_mode": "calendar",
+            "note": "До 1 года с момента пересечения госграницы РК (п. 2 ст. 65 Закона РК «О дорожном движении»)."
+          },
           "notes": "Пример. Проверьте актуальность."
         }
       ]
@@ -123,16 +360,54 @@
       "name": "Армения",
       "rules": [
         {
-          "citizenships": ["RU", "BY", "KZ"],
+          "citizenships": [
+            "RU"
+          ],
+          "visa_required": false,
+          "max_per_year": 180,
+          "year_mode": "rolling",
+          "visa_run": {
+            "allowed": true,
+            "note": "Новый въезд и срок по штампу определяет пограничная служба; повторный допуск не гарантирован."
+          },
+          "registration": {
+            "required": true,
+            "note": "Соглашение РФ–РА освобождает от регистрации первые 30 дней; при более длительном пребывании требуется учёт. Регистрация не обнуляет 180 дней. https://www.arlis.am/ru/acts/99294"
+          },
+          "source": "https://www.mfa.am/ru/visa ; https://www.arlis.am/hy/acts/173412",
+          "updated": "2026-10-25",
+          "notes": "До 180 дней в течение одного года без визы, если договором не предусмотрено иное. В калькуляторе годовое окно — последние 365 дней; это числовая модель, не подтверждение права на длительное проживание.",
+          "vehicle": {
+            "manual": true,
+            "note": "Таможенный режим зависит от регистрации автомобиля и статуса товара ЕАЭС. Для ТС из третьих стран возможен временный ввоз; гражданство владельца само по себе не означает отсутствие ограничений.",
+            "source": "https://eec.eaeunion.org/upload/iblock/93c/TK-EAES.pdf"
+          }
+        },
+        {
+          "citizenships": [
+            "BY",
+            "KZ"
+          ],
           "visa_required": false,
           "max_consecutive": 180,
           "max_in_period": 0,
           "period_days": 0,
           "max_per_year": 180,
           "year_mode": "rolling",
-          "visa_run": { "allowed": true, "min_days_outside": 0, "max_per_year": 0 },
-          "registration": { "required": false, "within_days": 0, "extends_stay": false, "extended": {} },
-          "vehicle": { "note": "ТС, зарегистрированные в ЕАЭС, — без ограничений по сроку." },
+          "visa_run": {
+            "allowed": true,
+            "min_days_outside": 0,
+            "max_per_year": 0
+          },
+          "registration": {
+            "required": false,
+            "within_days": 0,
+            "extends_stay": false,
+            "extended": {}
+          },
+          "vehicle": {
+            "note": "ТС, зарегистрированные в ЕАЭС, — без ограничений по сроку."
+          },
           "notes": "Пример. Проверьте актуальность."
         }
       ]
@@ -142,17 +417,27 @@
       "name": "Сербия",
       "rules": [
         {
-          "citizenships": ["RU"],
+          "citizenships": [
+            "RU"
+          ],
           "visa_required": false,
           "max_consecutive": 30,
-          "max_in_period": 0,
-          "period_days": 0,
-          "max_per_year": 0,
-          "year_mode": "calendar",
-          "visa_run": { "allowed": true, "min_days_outside": 0, "max_per_year": 0 },
-          "registration": { "required": true, "within_days": 1, "extends_stay": false, "extended": {}, "note": "Регистрация (бели картон) в течение 24 часов." },
-          "vehicle": { "max_in_period": 183, "period_days": 365, "year_mode": "rolling", "note": "Пример." },
-          "notes": "Пример. Проверьте актуальность."
+          "visa_run": {
+            "allowed": true,
+            "note": "Новый въезд и срок по штампу определяет пограничная служба; повторный допуск не гарантирован."
+          },
+          "registration": {
+            "required": true,
+            "note": "Принимающая сторона/гостиница оформляет «бели картон» в течение 24 часов. Это обязанность учёта, а не ограничение пребывания одним днём."
+          },
+          "source": "https://www.kdmid.ru/docs/serbia/information-about-the-country/",
+          "updated": "2026-10-25",
+          "notes": "Обычный паспорт РФ: без визы до 30 дней. Повторный допуск не гарантирован; регистрация по адресу не продлевает 30-дневный срок.",
+          "vehicle": {
+            "manual": true,
+            "note": "Для иностранного ТС, временно ввезённого для личных нужд, таможня указывает шесть месяцев в течение одного года. Календарные месяцы и индивидуальные условия не заменены условными 183 днями.",
+            "source": "https://www.carina.rs/putnici/pitanja-i-odgovori/privremeni-uvoz-izvoz.html"
+          }
         }
       ]
     },
@@ -161,17 +446,25 @@
       "name": "ОАЭ",
       "rules": [
         {
-          "citizenships": ["RU"],
+          "citizenships": [
+            "RU"
+          ],
           "visa_required": false,
-          "max_consecutive": 90,
           "max_in_period": 90,
           "period_days": 180,
-          "max_per_year": 0,
-          "year_mode": "calendar",
-          "visa_run": { "allowed": false },
+          "visa_run": {
+            "allowed": false,
+            "note": "Выезд не обнуляет 90/180."
+          },
           "registration": {},
-          "vehicle": { "max_consecutive": 90, "note": "Пример." },
-          "notes": "Пример. Проверьте актуальность."
+          "source": "https://www.mofa.gov.ae/en/Missions/Moscow/search?content=&faq=&keyword=&news=&page=6&services=",
+          "updated": "2026-10-25",
+          "notes": "Обычный паспорт РФ: до 90 дней в течение 180 дней по соглашению; не для работы, учёбы или постоянного проживания.",
+          "vehicle": {
+            "manual": true,
+            "note": "Временный допуск зависит от таможенного разрешения, страны регистрации и Carnet de Passages/гарантии. Универсальный срок 90 дней не используется.",
+            "source": "https://www.adcustoms.gov.ae/en/Policies-and-Regulations/Customs-Policies-and-procedures"
+          }
         }
       ]
     },
@@ -180,7 +473,32 @@
       "name": "Вьетнам",
       "rules": [
         {
-          "citizenships": ["RU", "BY"],
+          "citizenships": [
+            "RU"
+          ],
+          "visa_required": false,
+          "max_consecutive": 45,
+          "visa_run": {
+            "allowed": true,
+            "note": "Новый въезд и срок по штампу определяет пограничная служба; повторный допуск не гарантирован."
+          },
+          "registration": {
+            "required": true,
+            "note": "Учёт по месту проживания оформляется принимающей стороной и не увеличивает срок въезда."
+          },
+          "source": "https://vnembassy-moscow.mofa.gov.vn/web/guest/tin-chi-tiet/chi-tiet/viet-nam-39-s-visa-exemption-list-57163-596.html",
+          "updated": "2026-10-25",
+          "notes": "Без визы до 45 дней по резолюции 44/NQ-CP: 15.03.2025–14.03.2028. Электронная виза — отдельное основание и не получается отметкой «Регистрация».",
+          "vehicle": {
+            "manual": true,
+            "note": "Для иностранного туристического ТС требуется разрешение; официальная информация указывает до 45 дней и до 10 дополнительных дней при форс-мажоре. Определяющим является конкретное разрешение и маршрут.",
+            "source": "https://www.logistics.gov.vn/policy/vietnam/decree-regulates-conditions-for-cars-from-abroad-to-viet-nam"
+          }
+        },
+        {
+          "citizenships": [
+            "BY"
+          ],
           "visa_required": false,
           "visa_note": "Для пребывания дольше безвизового срока — электронная виза до 90 дней.",
           "max_consecutive": 45,
@@ -188,10 +506,53 @@
           "period_days": 0,
           "max_per_year": 0,
           "year_mode": "calendar",
-          "visa_run": { "allowed": true, "min_days_outside": 0, "max_per_year": 0 },
-          "registration": { "required": false, "within_days": 0, "extends_stay": false, "extended": {}, "note": "Регистрацию по месту проживания делает отель/арендодатель." },
-          "vehicle": { "note": "Пример: временный ввоз требует разрешения." },
+          "visa_run": {
+            "allowed": true,
+            "min_days_outside": 0,
+            "max_per_year": 0
+          },
+          "registration": {
+            "required": false,
+            "within_days": 0,
+            "extends_stay": false,
+            "extended": {},
+            "note": "Регистрацию по месту проживания делает отель/арендодатель."
+          },
+          "vehicle": {
+            "note": "Пример: временный ввоз требует разрешения."
+          },
           "notes": "Пример. Проверьте актуальность."
+        }
+      ]
+    },
+    {
+      "id": "AL",
+      "name": "Албания",
+      "rules": [
+        {
+          "citizenships": [
+            "RU"
+          ],
+          "visa_required": true,
+          "max_in_period": 90,
+          "period_days": 180,
+          "visa_run": {
+            "allowed": false,
+            "note": "Выезд не обнуляет 90/180; повторный въезд должен разрешаться визой/основанием."
+          },
+          "registration": {
+            "manual": true,
+            "note": "Условия учёта по адресу и длительного проживания проверяются отдельно."
+          },
+          "source": "https://ambasadat.gov.al/russia/en/embassy-services/ ; https://ambasadat.gov.al/russia/ru/embassy-services/",
+          "updated": "2026-10-25",
+          "notes": "Для обычного паспорта РФ нужна виза C; сезонный безвиз отменён в 2023 году. Возможны исключения по ранее использованной действующей многократной визе/ВНЖ Шенгена, США или Великобритании и другим основаниям МИД Албании. Виза определяет число въездов и разрешённые дни.",
+          "visa_note": "90/180 — верхний предел краткого пребывания, а не безвизовое разрешение. Проверьте визу или основание освобождения.",
+          "vehicle": {
+            "manual": true,
+            "note": "Таможня Албании: до шести месяцев в течение 12 месяцев для временного допуска. Короткий выезд не перезапускает срок; автомобиль нельзя оставлять при выезде владельца. Применимость и срок подтверждаются таможней.",
+            "source": "https://www.dogana.gov.al/english/c/168/179/customs-clearance-of-vehicles"
+          }
         }
       ]
     }

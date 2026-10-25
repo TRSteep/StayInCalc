@@ -29,7 +29,7 @@ type UI struct {
 
 	profileSel  *widget.Select
 	countrySel  *widget.Select
-	citizenship *widget.Entry
+	citizenship *widget.Select
 	refEntry    *widget.Entry
 	tripsBox    *fyne.Container
 	carBox      *fyne.Container
@@ -71,16 +71,15 @@ func (u *UI) build() {
 	newBtn := widget.NewButtonWithIcon("Новый", theme.ContentAddIcon(), u.newProfileDialog)
 	delBtn := widget.NewButtonWithIcon("", theme.DeleteIcon(), u.deleteProfile)
 
-	u.citizenship = widget.NewEntry()
-	u.citizenship.SetPlaceHolder("RU")
-	u.citizenship.OnChanged = func(s string) {
+	u.citizenship = widget.NewSelect(u.citizenshipOptions(), func(s string) {
 		if u.cur == nil {
 			return
 		}
-		u.cur.Citizenship = strings.ToUpper(strings.TrimSpace(s))
+		u.cur.Citizenship = citizenshipCode(s)
 		u.save()
 		u.recalc()
-	}
+	})
+	u.citizenship.PlaceHolder = "Выберите гражданство"
 
 	u.countrySel = widget.NewSelect(nil, func(name string) {
 		for i := range u.countries.Countries {
@@ -114,7 +113,7 @@ func (u *UI) build() {
 			widget.NewIcon(theme.AccountIcon()), widget.NewLabel("Профиль:"),
 			sized(u.profileSel, 200), newBtn, delBtn,
 			widget.NewSeparator(),
-			widget.NewLabel("Гражданство:"), sized(u.citizenship, 60),
+			widget.NewLabel("Гражданство:"), sized(u.citizenship, 185),
 			layout.NewSpacer(), rulesBtn,
 		),
 		container.NewHBox(
@@ -258,7 +257,13 @@ func (u *UI) selectProfile(p *Profile) {
 		dialog.ShowError(err, u.win)
 	}
 	u.cur = nil // чтобы OnChanged гражданства не перезаписал профиль
-	u.citizenship.SetText(p.Citizenship)
+	u.citizenship.Options = u.citizenshipOptions()
+	u.citizenship.Refresh()
+	if p.Citizenship == "" {
+		u.citizenship.ClearSelected()
+	} else {
+		u.citizenship.SetSelected(citizenshipLabel(p.Citizenship))
+	}
 	u.cur = p
 	if p.LastCountry != "" {
 		for _, c := range u.countries.Countries {
@@ -279,19 +284,19 @@ func (u *UI) selectProfile(p *Profile) {
 func (u *UI) newProfileDialog() {
 	name := widget.NewEntry()
 	name.SetPlaceHolder("Например: Иван")
-	cz := widget.NewEntry()
-	cz.SetPlaceHolder("RU")
+	cz := widget.NewSelect(u.citizenshipOptions(), nil)
+	cz.SetSelected(citizenshipLabel("RU"))
 	if u.cur != nil {
-		cz.SetText(u.cur.Citizenship)
+		cz.SetSelected(citizenshipLabel(u.cur.Citizenship))
 	}
 	dialog.ShowForm("Новый профиль (член семьи)", "Создать", "Отмена", []*widget.FormItem{
 		widget.NewFormItem("Имя", name),
-		widget.NewFormItem("Гражданство (код)", cz),
+		widget.NewFormItem("Гражданство", cz),
 	}, func(ok bool) {
 		if !ok {
 			return
 		}
-		p, err := u.store.NewProfile(name.Text, cz.Text)
+		p, err := u.store.NewProfile(name.Text, citizenshipCode(cz.Selected))
 		if err != nil {
 			dialog.ShowError(err, u.win)
 			return
@@ -543,6 +548,8 @@ func (u *UI) applyCountries(cf *CountriesFile) {
 	}
 	u.countries = cf
 	u.country = nil
+	u.citizenship.Options = u.citizenshipOptions()
+	u.citizenship.Refresh()
 	u.fillCountries()
 	for i := range cf.Countries {
 		if cf.Countries[i].ID == prev {
@@ -584,14 +591,16 @@ func (u *UI) recalc() {
 		}
 		body := widget.NewRichTextFromMarkdown(section)
 		body.Segments = styleReportSegments(body.Segments)
+		body.Wrapping = fyne.TextWrapWord
+		bodyTheme := reportTheme{u.app.Settings().Theme()}
+		styledBody := container.NewThemeOverride(body, bodyTheme)
 		if title != "" {
 			style := widget.RichTextStyleHeading
 			style.SizeName = reportTitleSize
 			body.Segments = append([]widget.RichTextSegment{&widget.TextSegment{Text: title, Style: style}}, body.Segments...)
 		}
-		body.Wrapping = fyne.TextWrapWord
-		bodyTheme := reportTheme{u.app.Settings().Theme()}
-		u.result.Add(widget.NewCard("", "", container.NewPadded(container.NewThemeOverride(body, bodyTheme))))
+		body.Refresh()
+		u.result.Add(widget.NewCard("", "", container.NewPadded(styledBody)))
 	}
 }
 
