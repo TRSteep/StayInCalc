@@ -7,6 +7,7 @@ data/settings.json
 *.tmp
 *.test
 *.out
+release/
 
 # IDE / ОС
 .idea/

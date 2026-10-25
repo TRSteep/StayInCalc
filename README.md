@@ -9,6 +9,11 @@ GUI-программа на Go (Fyne) для учёта дней пребыва�
 сколько осталось и до какой даты нужно выехать. Для машины предусмотрен отдельный учёт поездок и условий ввоза.
 
 ## Запуск
+
+Готовые архивы доступны в [Releases](https://github.com/TRSteep/StayCalc/releases).
+Сборка релизного архива из исходников: `powershell -ExecutionPolicy Bypass -File .\build-release.ps1`
+(Go и MinGW-w64 GCC должны быть установлены). Результат и SHA-256 — в папке `release`.
+
 `StayCalc.exe` — данные хранятся в папке `data` рядом с exe:
 
 ```

@@ -655,7 +655,7 @@ func (t reportTheme) Size(name fyne.ThemeSizeName) float32 {
 		return 24
 	}
 	if name == reportCompactTitleSize {
-		return 22
+		return 20
 	}
 	if name == theme.SizeNameHeadingText {
 		return 26
