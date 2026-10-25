@@ -84,7 +84,7 @@ func TestReportCardOrderAndOptionalCar(t *testing.T) {
 	u.cur.CarTrips["TEST"] = []Trip{{Entry: "2026-01-01"}}
 	report = u.report()
 	last := -1
-	for _, heading := range []string{"## Общая информация", "## Тест — Иван (RU)", "## Пребывание на", "## Автомобиль"} {
+	for _, heading := range []string{"# Тест — Иван (RU)", "## Общая информация", "# Выехать не позднее:", "## Пребывание на", "## Автомобиль"} {
 		i := strings.Index(report, heading)
 		if i <= last {
 			t.Fatalf("section order %s: %s", heading, report)

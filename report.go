@@ -220,6 +220,7 @@ func (u *UI) report() string {
 	if u.cur.Citizenship != "" {
 		context += " (" + u.cur.Citizenship + ")"
 	}
+	fmt.Fprintf(&b, "# %s\n\n---\n\n", context)
 	if !ok {
 		fmt.Fprintf(&b, "Для гражданства «%s» в countries.json нет правил. Добавьте правило с этим кодом или \"*\".\n", u.cur.Citizenship)
 		return b.String()
@@ -333,7 +334,6 @@ func (u *UI) report() string {
 		}
 	}
 
-	fmt.Fprintf(&b, "## %s\n\n", context)
 	r := evaluate(trips, lim, resetGap(rule), u.refDate, rawRule)
 	stayDecision(&b, r, "вы", regCap)
 	if rule.VisaRequired {

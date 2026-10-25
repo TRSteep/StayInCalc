@@ -585,8 +585,15 @@ func resetGap(r *Rule) int {
 func (u *UI) recalc() {
 	md := u.report()
 	u.result.RemoveAll()
-	for _, section := range strings.Split(md, "\n---\n") {
+	for i, section := range strings.Split(md, "\n---\n") {
 		section = strings.TrimSpace(section)
+		if i == 0 && strings.HasPrefix(section, "# ") && !strings.Contains(section, "\n") {
+			header := widget.NewLabelWithStyle(strings.TrimPrefix(section, "# "), fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
+			header.SizeName = theme.SizeNameHeadingText
+			header.Wrapping = fyne.TextWrapWord
+			u.result.Add(header)
+			continue
+		}
 		title := ""
 		if strings.HasPrefix(section, "## ") {
 			if line, rest, ok := strings.Cut(section, "\n"); ok {
