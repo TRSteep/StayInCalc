@@ -88,16 +88,8 @@ func returnPlans(b *strings.Builder, trips []Trip, rule *Rule, r Result, cp *Cap
 	if r.Error != nil || (!r.EntryBlocked && !r.Overstay && (r.Unlimited || r.ForecastLimited) && cp == nil) {
 		return
 	}
-	departure := r.LatestExit
-	if cp != nil && (r.Unlimited || cp.Date.Before(departure)) {
-		departure = cp.Date
-	}
-	if departure.Before(r.Ref) {
-		departure = r.Ref
-	}
-	if r.PlannedExit != nil && !r.PlannedExit.Before(r.Ref) && r.PlannedExit.Before(departure) {
-		departure = *r.PlannedExit
-	}
+	// «Сегодня» — выбранная дата расчёта, в том числе при планировании.
+	departure := r.Ref
 	if !r.InCountry {
 		departure = r.Ref.AddDate(0, 0, -1)
 		found := false
@@ -112,7 +104,7 @@ func returnPlans(b *strings.Builder, trips []Trip, rule *Rule, r Result, cp *Cap
 	}
 	b.WriteString("### Возвращение на 14 дней или месяц\n\n")
 	if r.InCountry {
-		fmt.Fprintf(b, "При выезде **%s** и отсутствии других поездок:\n\n", fd(departure))
+		fmt.Fprintf(b, "Если выехать сегодня, **%s**, и не совершать других поездок:\n\n", fd(departure))
 	} else {
 		fmt.Fprintf(b, "Вы вне страны. Варианты въезда начиная с **%s**:\n\n", fd(r.Ref))
 	}

@@ -45,7 +45,11 @@ func usageLine(b *strings.Builder, title string, used, max, rem int) {
 		fmt.Fprintf(b, "- %s: **%d из %d — превышено на %d**\n", title, used, max, -rem)
 		return
 	}
-	fmt.Fprintf(b, "- %s: %d из %d, осталось **%d**\n", title, used, max, rem)
+	if strings.HasPrefix(title, "За последние ") {
+		fmt.Fprintf(b, "- %s: **%d** из %d, осталось **%d**\n", title, used, max, rem)
+	} else {
+		fmt.Fprintf(b, "- %s: %d из %d, осталось **%d**\n", title, used, max, rem)
+	}
 }
 
 // Cap — предел, не зависящий от счётчиков дней (например, срок без регистрации).
@@ -109,7 +113,7 @@ func stayDecision(b *strings.Builder, r Result, who string, cp *Cap) {
 		case left < 0:
 			fmt.Fprintf(b, "**⚠ Срок без регистрации истёк**\n\n# %s\n\n%s. Нужна регистрация или выезд.\n\n", fd(cp.Date), cp.Reason)
 		case r.InCountry:
-			fmt.Fprintf(b, "Выехать не позднее\n\n# %s\n\nЕщё **%d дн.** после %s. Причина: %s.\n\n",
+			fmt.Fprintf(b, "# Выехать не позднее: %s\n\nЕщё **%d дн.** после %s. Причина: %s.\n\n",
 				fd(cp.Date), left, ref, cp.Reason)
 		default:
 			fmt.Fprintf(b, "При въезде %s можно находиться до\n\n# %s\n\nВключительно: **%d дн.** Причина: %s.\n\n",
@@ -138,7 +142,7 @@ func stayDecision(b *strings.Builder, r Result, who string, cp *Cap) {
 	case r.ForecastLimited:
 		fmt.Fprintf(b, "**В пределах расчёта до %s предел срока не найден.** Последний допустимый день пока не определён.\n\n", fd(r.LatestExit))
 	case r.InCountry:
-		fmt.Fprintf(b, "Выехать не позднее\n\n# %s\n\nЕщё **%d дн.** после %s. Причина: %s.\n\n",
+		fmt.Fprintf(b, "# Выехать не позднее: %s\n\nЕщё **%d дн.** после %s. Причина: %s.\n\n",
 			fd(r.LatestExit), r.DaysLeft(), ref, r.LatestReason)
 		if r.PlannedExit != nil && r.PlannedExit.After(r.LatestExit) {
 			fmt.Fprintf(b, "⚠ Запланированный выезд %s позже допустимого!\n\n", fd(*r.PlannedExit))
@@ -308,7 +312,7 @@ func (u *UI) report() string {
 		}
 	}
 
-	fmt.Fprintf(&b, "## Когда выехать\n\n%s\n\n", context)
+	fmt.Fprintf(&b, "## %s\n\n", context)
 	r := evaluate(trips, lim, resetGap(rule), u.refDate, rule)
 	stayDecision(&b, r, "вы", regCap)
 	if rule.VisaRequired {

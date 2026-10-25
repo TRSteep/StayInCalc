@@ -572,19 +572,47 @@ func (u *UI) recalc() {
 			}
 		}
 		body := widget.NewRichTextFromMarkdown(section)
+		body.Segments = styleReportSegments(body.Segments)
 		body.Wrapping = fyne.TextWrapWord
 		bodyTheme := reportTheme{u.app.Settings().Theme()}
 		u.result.Add(widget.NewCard(title, "", container.NewPadded(container.NewThemeOverride(body, bodyTheme))))
 	}
 }
 
-// Крупная дата внутри карточки заметнее её заголовка; остальные размеры
-// и цвета наследуются из выбранной пользователем темы.
+// Акценты наследуют цвет выбранной темы и масштабируются вместе с интерфейсом.
 type reportTheme struct{ fyne.Theme }
 
 func (t reportTheme) Size(name fyne.ThemeSizeName) float32 {
 	if name == theme.SizeNameHeadingText {
-		return 32
+		return 26
 	}
 	return t.Theme.Size(name)
+}
+
+func styleReportSegments(segments []widget.RichTextSegment) []widget.RichTextSegment {
+	out := make([]widget.RichTextSegment, 0, len(segments))
+	previous := ""
+	for _, segment := range segments {
+		switch s := segment.(type) {
+		case *widget.ListSegment:
+			s.Items = styleReportSegments(s.Items)
+		case *widget.ParagraphSegment:
+			s.Texts = styleReportSegments(s.Texts)
+		case *widget.TextSegment:
+			if s.Text == "Возвращение на 14 дней или месяц" || strings.HasPrefix(s.Text, "На месяц (30 дней)") {
+				// Непустой пробельный сегмент даёт видимую пустую строку в Fyne.
+				out = append(out, &widget.TextSegment{Text: " ", Style: widget.RichTextStyleParagraph})
+			}
+			if s.Style.SizeName == theme.SizeNameHeadingText {
+				s.Style.ColorName = theme.ColorNamePrimary
+			}
+			if s.Style.TextStyle.Bold && strings.HasSuffix(strings.TrimSpace(previous), "осталось") {
+				s.Style.SizeName = theme.SizeNameSubHeadingText
+				s.Style.ColorName = theme.ColorNamePrimary
+			}
+			previous = s.Text
+		}
+		out = append(out, segment)
+	}
+	return out
 }

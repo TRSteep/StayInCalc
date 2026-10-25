@@ -67,7 +67,7 @@ func TestReturnReportShowsEarlierConditionalExtension(t *testing.T) {
 	r := evaluate(trips, rule.Limits, 0, d("2026-01-15"), rule)
 	var b strings.Builder
 	returnPlans(&b, trips, rule, r, nil)
-	if !strings.Contains(b.String(), "Въезд **30.01.2026**") || !strings.Contains(b.String(), "потребуется регистрация / продление") {
+	if !strings.Contains(b.String(), "Въезд **15.01.2026**") || !strings.Contains(b.String(), "потребуется регистрация / продление") {
 		t.Fatal(b.String())
 	}
 }
@@ -78,17 +78,31 @@ func TestReportCardOrderAndOptionalCar(t *testing.T) {
 	if strings.Contains(report, "## Автомобиль") {
 		t.Fatal("empty car card")
 	}
-	if !strings.Contains(report, "# 30.01.2026") || !strings.Contains(report, "месяц (30 дней)") {
+	if !strings.Contains(report, "# Выехать не позднее: 30.01.2026") || !strings.Contains(report, "месяц (30 дней)") {
 		t.Fatal(report)
 	}
 	u.cur.CarTrips["TEST"] = []Trip{{Entry: "2026-01-01"}}
 	report = u.report()
 	last := -1
-	for _, heading := range []string{"## Когда выехать", "## Пребывание на", "## Автомобиль", "## Общая информация"} {
+	for _, heading := range []string{"## Тест — Иван (RU)", "## Пребывание на", "## Автомобиль", "## Общая информация"} {
 		i := strings.Index(report, heading)
 		if i <= last {
 			t.Fatalf("section order %s: %s", heading, report)
 		}
 		last = i
+	}
+}
+
+func TestReturnScenarioStartsOnReferenceDate(t *testing.T) {
+	rule := &Rule{Limits: Limits{MaxConsecutive: 30}, VisaRun: VisaRun{Allowed: true, MinDaysOutside: 7}}
+	trips := []Trip{{Entry: "2026-01-01", Exit: "2026-01-25"}}
+	r := evaluate(trips, rule.Limits, 7, d("2026-01-15"), rule)
+	var b strings.Builder
+	returnPlans(&b, trips, rule, r, nil)
+	if !strings.Contains(b.String(), "Если выехать сегодня, **15.01.2026**") || !strings.Contains(b.String(), "Въезд **23.01.2026**") {
+		t.Fatal(b.String())
+	}
+	if strings.Contains(b.String(), "Въезд **07.02.2026**") {
+		t.Fatal("used deadline instead of reference date")
 	}
 }
