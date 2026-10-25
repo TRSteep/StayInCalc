@@ -634,6 +634,9 @@ func (u *UI) recalc() {
 		if title != "" {
 			style := widget.RichTextStyleHeading
 			style.SizeName = reportTitleSize
+			if strings.HasPrefix(title, "Пребывание на ") {
+				style.SizeName = reportCompactTitleSize
+			}
 			body.Segments = append([]widget.RichTextSegment{&widget.TextSegment{Text: title, Style: style}}, body.Segments...)
 		}
 		body.Refresh()
@@ -642,6 +645,7 @@ func (u *UI) recalc() {
 }
 
 const reportTitleSize fyne.ThemeSizeName = "staycalc.cardTitle"
+const reportCompactTitleSize fyne.ThemeSizeName = "staycalc.compactTitle"
 
 // Акценты наследуют цвет выбранной темы и масштабируются вместе с интерфейсом.
 type reportTheme struct{ fyne.Theme }
@@ -649,6 +653,9 @@ type reportTheme struct{ fyne.Theme }
 func (t reportTheme) Size(name fyne.ThemeSizeName) float32 {
 	if name == reportTitleSize {
 		return 24
+	}
+	if name == reportCompactTitleSize {
+		return 22
 	}
 	if name == theme.SizeNameHeadingText {
 		return 26
@@ -669,6 +676,7 @@ func styleReportSegments(segments []widget.RichTextSegment) []widget.RichTextSeg
 			if s.Text == "Возвращение" {
 				// Непустой пробельный сегмент даёт видимую пустую строку в Fyne.
 				out = append(out, &widget.TextSegment{Text: " ", Style: widget.RichTextStyleParagraph})
+				s.Style.SizeName = reportTitleSize
 			}
 			if s.Style.SizeName == theme.SizeNameHeadingText {
 				label, date, ok := strings.Cut(s.Text, ": ")
@@ -676,6 +684,9 @@ func styleReportSegments(segments []widget.RichTextSegment) []widget.RichTextSeg
 					labelStyle, dateStyle := s.Style, s.Style
 					labelStyle.Inline, dateStyle.Inline = true, true
 					labelStyle.ColorName = theme.ColorNameForeground
+					if label == "Выехать не позднее" || label == "Полное обнуление дней" {
+						labelStyle.SizeName = reportCompactTitleSize
+					}
 					dateStyle.ColorName = theme.ColorNamePrimary
 					out = append(out, &widget.TextSegment{Text: label + ": ", Style: labelStyle}, &widget.TextSegment{Text: date, Style: dateStyle}, &widget.TextSegment{Style: widget.RichTextStyleParagraph})
 					continue
