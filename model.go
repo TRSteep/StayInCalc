@@ -139,8 +139,17 @@ func ParseCountries(data []byte) (*CountriesFile, error) {
 			if len(r.Citizenships) == 0 {
 				return nil, fmt.Errorf("страна %s, правило №%d: пустой список citizenships", c.ID, j+1)
 			}
-			if (r.MaxInPeriod > 0) != (r.PeriodDays > 0) {
-				return nil, fmt.Errorf("страна %s, правило №%d: max_in_period и period_days задаются вместе", c.ID, j+1)
+			if r.VisaRun.MinDaysOutside < 0 || r.VisaRun.MaxPerYear < 0 || r.Registration.WithinDays < 0 {
+				return nil, fmt.Errorf("страна %s, правило №%d: сроки и лимиты не могут быть отрицательными", c.ID, j+1)
+			}
+			for _, lim := range []Limits{r.Limits, r.Vehicle.Limits, r.Limits.Merge(r.Registration.Extended)} {
+				if err := validateLimits(lim); err != nil {
+					return nil, fmt.Errorf("страна %s, правило №%d: %w", c.ID, j+1, err)
+				}
+			}
+			ext := r.Registration.Extended
+			if ext.MaxConsecutive < 0 || ext.MaxInPeriod < 0 || ext.PeriodDays < 0 || ext.MaxPerYear < 0 {
+				return nil, fmt.Errorf("страна %s: лимиты продления не могут быть отрицательными", c.ID)
 			}
 			for _, ym := range []string{r.YearMode, r.Vehicle.YearMode, r.Registration.Extended.YearMode} {
 				if ym != "" && ym != "calendar" && ym != "rolling" {
@@ -150,6 +159,16 @@ func ParseCountries(data []byte) (*CountriesFile, error) {
 		}
 	}
 	return &cf, nil
+}
+
+func validateLimits(l Limits) error {
+	if l.MaxConsecutive < 0 || l.MaxInPeriod < 0 || l.PeriodDays < 0 || l.MaxPerYear < 0 {
+		return errors.New("лимиты не могут быть отрицательными")
+	}
+	if (l.MaxInPeriod > 0) != (l.PeriodDays > 0) {
+		return errors.New("max_in_period и period_days задаются вместе")
+	}
+	return nil
 }
 
 // ---------- Профили (data/profiles/*.json) ----------
@@ -341,7 +360,7 @@ func isoToUI(s string) string {
 	if t, ok := parseISO(s); ok {
 		return t.Format(dateUI)
 	}
-	return ""
+	return s
 }
 
 func today() time.Time {

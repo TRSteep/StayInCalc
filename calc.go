@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"sort"
 	"time"
 )
 
@@ -134,10 +136,14 @@ type Violation struct {
 }
 
 type Result struct {
-	Ref          time.Time
-	InCountry    bool
-	CurrentEntry time.Time
-	PlannedExit  *time.Time // запланированная дата выезда текущей поездки, если указана
+	Error                error // при ошибке данных прогноз не рассчитывается
+	ForecastLimited      bool  // предел не найден в пределах горизонта
+	EarlyForecastLimited bool
+	EntryBlocked         bool
+	Ref                  time.Time
+	InCountry            bool
+	CurrentEntry         time.Time
+	PlannedExit          *time.Time // запланированная дата выезда текущей поездки, если указана
 
 	Used      Usage // на дату расчёта
 	Remaining Usage // остаток по каждому лимиту на дату расчёта (-1 — не ограничено)
@@ -171,12 +177,28 @@ func remaining(max, used int) int {
 
 // Evaluate считает пребывание по списку поездок на дату ref.
 func Evaluate(trips []Trip, lim Limits, resetGap int, ref time.Time) Result {
+	return evaluate(trips, lim, resetGap, ref, nil)
+}
+
+// evaluate использует условия каждой поездки для истории, lim — для прогноза.
+func evaluate(trips []Trip, lim Limits, resetGap int, ref time.Time, rule *Rule) Result {
 	refD := dayNum(ref)
 	res := Result{Ref: ref, Unlimited: lim.unlimited()}
+	if err := validateLimits(lim); err != nil {
+		res.Error = err
+		return res
+	}
+	if err := validateTrips(trips); err != nil {
+		res.Error = err
+		return res
+	}
+	trips = append([]Trip(nil), trips...)
+	sort.SliceStable(trips, func(i, j int) bool { return trips[i].Entry < trips[j].Entry })
 
 	type iv struct {
 		from, to int
 		open     bool
+		trip     Trip
 	}
 	var ivs []iv
 	minD, maxD := refD, refD
@@ -199,7 +221,7 @@ func Evaluate(trips []Trip, lim Limits, resetGap int, ref time.Time) Result {
 				x = refD
 			}
 		}
-		ivs = append(ivs, iv{e, x, open})
+		ivs = append(ivs, iv{e, x, open, t})
 		if e < minD {
 			minD = e
 		}
@@ -217,7 +239,9 @@ func Evaluate(trips []Trip, lim Limits, resetGap int, ref time.Time) Result {
 	}
 
 	lo := minD - 400
-	hi := maxD + horizonDays + 400
+	// Ближайший въезд может оказаться у края горизонта; его срок тоже
+	// рассчитывается на полный горизонт вперёд.
+	hi := maxD + 2*horizonDays + 400
 
 	// Все известные дни (включая запланированные) — для поиска нарушений.
 	all := newPresence(lo, hi)
@@ -227,15 +251,46 @@ func Evaluate(trips []Trip, lim Limits, resetGap int, ref time.Time) Result {
 			all.set(d, true)
 		}
 	}
+	previousReason := ""
 	for d := minD; d <= maxD; d++ {
+		why := ""
 		if all.has(d) {
-			if why := all.broken(d, lim, resetGap); why != "" {
-				if len(res.Violations) == 0 || res.Violations[len(res.Violations)-1].Reason != why ||
-					!all.has(d-1) {
-					res.Violations = append(res.Violations, Violation{dayTime(d), why})
+			historyLimits := lim
+			if rule != nil {
+				for i := len(ivs) - 1; i >= 0; i-- {
+					v := ivs[i]
+					if v.from <= d && v.to >= d {
+						historyLimits = rule.Limits
+						if v.trip.Registered && rule.Registration.ExtendsStay {
+							historyLimits = historyLimits.Merge(rule.Registration.Extended)
+						}
+						reg := rule.Registration
+						if reg.Required && reg.WithinDays > 0 && !v.trip.Registered && d-v.from >= reg.WithinDays {
+							why = "срок без регистрации"
+						}
+						break
+					}
 				}
 			}
+			if why == "" {
+				why = all.broken(d, historyLimits, resetGap)
+			}
 		}
+		if why != "" && why != previousReason {
+			res.Violations = append(res.Violations, Violation{dayTime(d), why})
+		}
+		previousReason = why
+	}
+	if rule != nil && rule.VisaRun.MaxPerYear > 0 {
+		counts := map[int]int{}
+		for _, v := range ivs {
+			y := dayTime(v.from).Year()
+			counts[y]++
+			if counts[y] > rule.VisaRun.MaxPerYear {
+				res.Violations = append(res.Violations, Violation{dayTime(v.from), "лимит въездов в году"})
+			}
+		}
+		sort.SliceStable(res.Violations, func(i, j int) bool { return res.Violations[i].Date.Before(res.Violations[j].Date) })
 	}
 
 	// Въезды в текущем календарном году (для лимита визаранов).
@@ -279,13 +334,32 @@ func Evaluate(trips []Trip, lim Limits, resetGap int, ref time.Time) Result {
 
 	// Симуляция: остаёмся (или въезжаем) с даты start и смотрим, когда сработает лимит.
 	simulate := func(start int) (last int, reason string, ok bool) {
+		forecastLimits := lim
+		if rule != nil && start > refD {
+			// Новый въезд не наследует продление предыдущей поездки.
+			forecastLimits = rule.Limits
+		}
+		if rule != nil && rule.VisaRun.MaxPerYear > 0 && (!res.InCountry || start > refD) {
+			n := 0
+			for _, v := range ivs {
+				if v.from <= refD && v.from < start && dayTime(v.from).Year() == dayTime(start).Year() {
+					n++
+				}
+			}
+			if n >= rule.VisaRun.MaxPerYear {
+				return start - 1, "лимит въездов в году", false
+			}
+		}
 		s := clonePresence(past)
 		if !res.InCountry || start > refD {
 			s.markEntry(start) // новый въезд
 		}
 		for d := start; d <= start+horizonDays; d++ {
 			s.set(d, true)
-			if why := s.broken(d, lim, resetGap); why != "" {
+			if rule != nil && start > refD && rule.Registration.Required && rule.Registration.WithinDays > 0 && d-start >= rule.Registration.WithinDays {
+				return d - 1, "срок без регистрации", true
+			}
+			if why := s.broken(d, forecastLimits, resetGap); why != "" {
 				return d - 1, why, d > start
 			}
 		}
@@ -294,6 +368,8 @@ func Evaluate(trips []Trip, lim Limits, resetGap int, ref time.Time) Result {
 
 	last, why, ok := simulate(refD)
 	res.LatestExit, res.LatestReason = dayTime(last), why
+	res.ForecastLimited = ok && why == "" && !res.Unlimited
+	res.EntryBlocked = !res.InCountry && !ok
 	if ok && lim.PeriodDays > 0 {
 		res.DroppedFromPeriod = past.count(refD-lim.PeriodDays+1, min(last-lim.PeriodDays, refD-1))
 	}
@@ -312,15 +388,51 @@ func Evaluate(trips []Trip, lim Limits, resetGap int, ref time.Time) Result {
 		}
 		// ищем ближайшую дату, когда можно (снова) въехать
 		for d := refD + 1; d <= refD+horizonDays; d++ {
-			if l, _, ok := simulate(d); ok {
+			if l, reason, ok := simulate(d); ok {
 				e := dayTime(d)
 				res.EarliestEntry = &e
 				res.StayFromEarly = dayTime(l)
+				res.EarlyForecastLimited = reason == ""
 				break
 			}
 		}
 	}
 	return res
+}
+
+// Пустые строки допускаются при редактировании; пересечение в день выезда допустимо.
+func validateTrips(trips []Trip) error {
+	type interval struct {
+		entry, exit time.Time
+		row         int
+		open        bool
+	}
+	var list []interval
+	for i, trip := range trips {
+		if trip.Entry == "" && trip.Exit == "" {
+			continue
+		}
+		entry, ok := parseISO(trip.Entry)
+		if !ok {
+			return fmt.Errorf("поездка №%d: некорректная дата въезда", i+1)
+		}
+		exit, ok := parseISO(trip.Exit)
+		if trip.Exit != "" && !ok {
+			return fmt.Errorf("поездка №%d: некорректная дата выезда", i+1)
+		}
+		if ok && exit.Before(entry) {
+			return fmt.Errorf("поездка №%d: выезд раньше въезда", i+1)
+		}
+		list = append(list, interval{entry, exit, i + 1, trip.Exit == ""})
+	}
+	sort.SliceStable(list, func(i, j int) bool { return list[i].entry.Before(list[j].entry) })
+	for i := 1; i < len(list); i++ {
+		prev, cur := list[i-1], list[i]
+		if prev.open || cur.entry.Before(prev.exit) || cur.entry.Equal(prev.entry) {
+			return fmt.Errorf("поездки №%d и №%d пересекаются; проверьте даты выезда", prev.row, cur.row)
+		}
+	}
+	return nil
 }
 
 func clonePresence(p *presence) *presence {

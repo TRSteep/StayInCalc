@@ -58,6 +58,10 @@ type Cap struct {
 
 // stayBlock — общий вывод для человека и машины.
 func stayBlock(b *strings.Builder, r Result, lim Limits, who string, cp *Cap) {
+	if r.Error != nil {
+		fmt.Fprintf(b, "**Ошибка данных (%s): %s.** Исправьте поездки для расчёта.\n\n", who, r.Error)
+		return
+	}
 	ref := fd(r.Ref)
 	if r.InCountry {
 		n := dayNum(r.Ref) - dayNum(r.CurrentEntry) + 1
@@ -95,18 +99,26 @@ func stayBlock(b *strings.Builder, r Result, lim Limits, who string, cp *Cap) {
 			fmt.Fprintf(b, "**При въезде %s можно находиться до %s** включительно (%d дн., сработает: %s).\n\n",
 				ref, fd(cp.Date), left+1, cp.Reason)
 		}
-		fmt.Fprintf(b, "**%s — до %s** (ещё %d дн. после %s, сработает: %s).\n\n",
-			cp.Alt, fd(r.LatestExit), r.DaysLeft(), ref, r.LatestReason)
+		if r.ForecastLimited || r.Unlimited {
+			fmt.Fprintf(b, "**%s:** в пределах расчёта до %s предел срока не найден.\n\n", cp.Alt, fd(r.LatestExit))
+		} else {
+			fmt.Fprintf(b, "**%s — до %s** (ещё %d дн. после %s, сработает: %s).\n\n",
+				cp.Alt, fd(r.LatestExit), r.DaysLeft(), ref, r.LatestReason)
+		}
 		periodNote(b, r, lim)
 		violations(b, r)
 		return
 	}
 
 	switch {
+	case r.EntryBlocked:
+		fmt.Fprintf(b, "**Въезд на %s невозможен:** %s.\n\n", ref, r.LatestReason)
 	case r.Overstay:
 		fmt.Fprintf(b, "**⚠ ПРЕВЫШЕНИЕ СРОКА** (%s). Последний законный день был %s.\n\n", r.LatestReason, fd(r.LatestExit))
 	case r.Unlimited:
 		b.WriteString("**Ограничений по сроку нет.**\n\n")
+	case r.ForecastLimited:
+		fmt.Fprintf(b, "**В пределах расчёта до %s предел срока не найден.** Последний допустимый день пока не определён.\n\n", fd(r.LatestExit))
 	case r.InCountry:
 		fmt.Fprintf(b, "**Выехать не позднее: %s** — ещё %d дн. после %s (сработает: %s).\n\n",
 			fd(r.LatestExit), r.DaysLeft(), ref, r.LatestReason)
@@ -118,10 +130,14 @@ func stayBlock(b *strings.Builder, r Result, lim Limits, who string, cp *Cap) {
 			ref, fd(r.LatestExit), r.DaysLeft()+1, r.LatestReason)
 	}
 	if r.EarliestEntry != nil {
-		fmt.Fprintf(b, "**Ближайший возможный въезд: %s**, тогда можно находиться до %s (%d дн.).\n\n",
-			fd(*r.EarliestEntry), fd(r.StayFromEarly), dayNum(r.StayFromEarly)-dayNum(*r.EarliestEntry)+1)
-	} else if !r.InCountry && !r.Unlimited && r.LatestExit.Before(r.Ref) {
-		fmt.Fprintf(b, "Въезд на %s сейчас невозможен.\n\n", ref)
+		if r.EarlyForecastLimited {
+			fmt.Fprintf(b, "**Ближайший возможный въезд: %s.** В пределах расчёта до %s предел срока не найден.\n\n", fd(*r.EarliestEntry), fd(r.StayFromEarly))
+		} else {
+			fmt.Fprintf(b, "**Ближайший возможный въезд: %s**, тогда можно находиться до %s (%d дн.).\n\n",
+				fd(*r.EarliestEntry), fd(r.StayFromEarly), dayNum(r.StayFromEarly)-dayNum(*r.EarliestEntry)+1)
+		}
+	} else if r.EntryBlocked {
+		b.WriteString("Допустимая дата въезда в пределах расчёта не найдена.\n\n")
 	}
 	periodNote(b, r, lim)
 	violations(b, r)
@@ -130,7 +146,7 @@ func stayBlock(b *strings.Builder, r Result, lim Limits, who string, cp *Cap) {
 // periodNote поясняет, почему реальный остаток больше остатка «на сегодня»:
 // пока вы в стране, дни старых поездок выпадают из скользящего окна.
 func periodNote(b *strings.Builder, r Result, lim Limits) {
-	if r.DroppedFromPeriod == 0 || r.Remaining.InPeriod < 0 || r.Overstay || r.DaysLeft() <= r.Remaining.InPeriod {
+	if r.ForecastLimited || r.DroppedFromPeriod == 0 || r.Remaining.InPeriod < 0 || r.Overstay || r.DaysLeft() <= r.Remaining.InPeriod {
 		return
 	}
 	fmt.Fprintf(b, "_Почему больше %d дн.: остаток %d из %d — это на %s. Пока вы в стране, из окна %d дней "+
@@ -151,6 +167,11 @@ func violations(b *strings.Builder, r Result) {
 
 func (u *UI) report() string {
 	var b strings.Builder
+	if u.refEntry != nil {
+		if _, ok := parseUserDate(u.refEntry.Text); !ok {
+			return "**Ошибка даты расчёта.** Введите дату в формате ДД.ММ.ГГГГ."
+		}
+	}
 	if u.cur == nil {
 		return "## Нет профиля\n\nНажмите «Новый», чтобы создать профиль. Для каждого члена семьи — отдельный профиль."
 	}
@@ -236,7 +257,7 @@ func (u *UI) report() string {
 			continue
 		}
 		ex, hasEx := parseISO(trips[i].Exit)
-		if !hasEx || dayNum(ex) >= refD {
+		if (!hasEx || dayNum(ex) >= refD) && (curTrip == nil || trips[i].Entry > curTrip.Entry) {
 			curTrip = &trips[i]
 		}
 	}
@@ -274,10 +295,10 @@ func (u *UI) report() string {
 	if rule.VisaRequired {
 		b.WriteString("_Нужна виза: срок ниже рассчитан по правилам страны; он не может превышать срок, указанный в визе._\n\n")
 	}
-	r := Evaluate(trips, lim, resetGap(rule), u.refDate)
+	r := evaluate(trips, lim, resetGap(rule), u.refDate, rule)
 	stayBlock(&b, r, lim, "вы", regCap)
 
-	if curTrip != nil && reg.Required {
+	if r.Error == nil && curTrip != nil && reg.Required {
 		switch {
 		case registered:
 			b.WriteString("- Регистрация: ✓ отмечена\n")
@@ -289,7 +310,7 @@ func (u *UI) report() string {
 			fmt.Fprintf(&b, "- **Зарегистрироваться до %s** — затем отметьте «Регистрация» у текущей поездки\n", fd(regCap.Date))
 		}
 	}
-	if vr.MaxPerYear > 0 {
+	if r.Error == nil && vr.MaxPerYear > 0 {
 		mark := ""
 		if r.EntriesInYear > vr.MaxPerYear {
 			mark = " **⚠ превышено**"
@@ -308,7 +329,7 @@ func (u *UI) report() string {
 	carTrips := u.cur.CarTrips[u.country.ID]
 	hasCar := false
 	for _, t := range carTrips {
-		if t.Entry != "" {
+		if t.Entry != "" || t.Exit != "" {
 			hasCar = true
 		}
 	}

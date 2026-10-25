@@ -59,9 +59,9 @@ func newUI(a fyne.App, store *Store) *UI {
 
 func (u *UI) build() {
 	u.profileSel = widget.NewSelect(nil, func(name string) {
-		for _, p := range u.profiles {
-			if p.Name == name {
-				u.selectProfile(p)
+		for i, label := range u.profileSel.Options {
+			if label == name {
+				u.selectProfile(u.profiles[i])
 				return
 			}
 		}
@@ -101,8 +101,8 @@ func (u *UI) build() {
 	refField, refEntry := u.dateField(u.refDate.Format(dateISO), func(iso string) {
 		if t, ok := parseISO(iso); ok {
 			u.refDate = t
-			u.recalc()
 		}
+		u.recalc()
 	})
 	u.refEntry = refEntry
 	todayBtn := widget.NewButton("Сегодня", func() { u.refEntry.SetText(today().Format(dateUI)) })
@@ -154,8 +154,8 @@ func sized(o fyne.CanvasObject, w float32) fyne.CanvasObject {
 	return container.NewGridWrap(fyne.NewSize(w, o.MinSize().Height), o)
 }
 
-// dateField — поле ДД.ММ.ГГГГ с кнопкой календаря. onValid вызывается с ISO-датой
-// (или "" при очистке поля); некорректный ввод игнорируется до исправления.
+// dateField нормализует корректную дату в ISO. Некорректный ввод сохраняется
+// как черновик, чтобы отчёт показывал ошибку вместо расчёта по старой дате.
 func (u *UI) dateField(iso string, onValid func(string)) (fyne.CanvasObject, *widget.Entry) {
 	e := widget.NewEntry()
 	e.SetPlaceHolder("ДД.ММ.ГГГГ")
@@ -176,6 +176,8 @@ func (u *UI) dateField(iso string, onValid func(string)) (fyne.CanvasObject, *wi
 		}
 		if t, ok := parseUserDate(s); ok && len(strings.TrimSpace(s)) >= 8 {
 			onValid(t.Format(dateISO))
+		} else {
+			onValid(s)
 		}
 	}
 	var btn *widget.Button
@@ -205,8 +207,22 @@ func (u *UI) reloadProfiles(selectFile string) {
 	}
 	u.profiles = ps
 	var names []string
+	counts := map[string]int{}
 	for _, p := range ps {
-		names = append(names, p.Name)
+		counts[p.Name]++
+	}
+	used := map[string]bool{}
+	for _, p := range ps {
+		label := p.Name
+		if counts[p.Name] > 1 {
+			label += " (" + filepath.Base(p.file) + ")"
+		}
+		base := label
+		for n := 2; used[label]; n++ {
+			label = fmt.Sprintf("%s [%d]", base, n)
+		}
+		used[label] = true
+		names = append(names, label)
 	}
 	u.profileSel.Options = names
 	u.profileSel.Refresh()
@@ -218,15 +234,15 @@ func (u *UI) reloadProfiles(selectFile string) {
 		u.rebuildTrips()
 		u.recalc()
 	case selectFile != "":
-		for _, p := range ps {
+		for i, p := range ps {
 			if p.file == selectFile {
-				u.profileSel.SetSelected(p.Name)
+				u.profileSel.SetSelectedIndex(i)
 				return
 			}
 		}
 		fallthrough
 	default:
-		u.profileSel.SetSelected(ps[0].Name)
+		u.profileSel.SetSelectedIndex(0)
 	}
 }
 
@@ -363,7 +379,9 @@ func (u *UI) tripRow(car bool, i int) fyne.CanvasObject {
 		get().Exit = iso
 		l := u.tripsMap(car)[cid]
 		// заполнили выезд в последней строке — добавляем новую пару полей
-		if iso != "" && i == len(l)-1 && get().Entry != "" {
+		_, validExit := parseISO(iso)
+		_, validEntry := parseISO(get().Entry)
+		if validExit && validEntry && i == len(l)-1 {
 			u.tripsMap(car)[cid] = append(l, Trip{})
 			box := u.tripsBox
 			if car {
