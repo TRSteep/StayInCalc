@@ -2,11 +2,25 @@ package main
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 )
 
 func fd(t time.Time) string { return t.Format(dateUI) }
+
+// Источник может содержать несколько URL через пробел или « ; ».
+// Markdown-ссылки Fyne открывает системным браузером при нажатии.
+func sourceLinks(source string) string {
+	parts := strings.Fields(source)
+	for i, part := range parts {
+		u, err := url.Parse(part)
+		if err == nil && (u.Scheme == "https" || u.Scheme == "http") && u.Hostname() != "" {
+			parts[i] = fmt.Sprintf("[%s](<%s>)", u.Hostname(), u.String())
+		}
+	}
+	return strings.Join(parts, " ")
+}
 
 func yesNo(b bool) string {
 	if b {
@@ -283,7 +297,7 @@ func (u *UI) report() string {
 		fmt.Fprintf(&b, "- Примечание: %s\n", rule.Notes)
 	}
 	if rule.Updated != "" || rule.Source != "" {
-		fmt.Fprintf(&b, "- Источник: %s %s\n", rule.Source, rule.Updated)
+		fmt.Fprintf(&b, "- Источник: %s %s\n", sourceLinks(rule.Source), rule.Updated)
 	}
 
 	// --- Человек ---
@@ -385,7 +399,7 @@ func (u *UI) report() string {
 		}
 		fmt.Fprintf(&b, "%s\n", rule.Vehicle.Note)
 		if rule.Vehicle.Source != "" {
-			fmt.Fprintf(&b, "\nИсточник: %s\n", rule.Vehicle.Source)
+			fmt.Fprintf(&b, "\nИсточник: %s\n", sourceLinks(rule.Vehicle.Source))
 		}
 	}
 	return b.String()
