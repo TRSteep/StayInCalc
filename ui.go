@@ -143,10 +143,11 @@ func (u *UI) build() {
 
 	u.result = container.NewVBox()
 
-	split := container.NewHSplit(tabs, container.NewVScroll(container.NewPadded(u.result)))
-	split.Offset = 0.48
-
-	u.win.SetContent(container.NewBorder(top, nil, nil, nil, split))
+	// Левая панель занимает минимальную ширину, необходимую всем её полям.
+	// Border растягивает только отчёт; ширина дат не зависит от ширины окна.
+	dates := container.NewBorder(nil, nil, nil, widget.NewSeparator(), tabs)
+	u.win.SetContent(container.NewBorder(top, nil, dates, nil,
+		container.NewVScroll(container.NewPadded(u.result))))
 }
 
 func sized(o fyne.CanvasObject, w float32) fyne.CanvasObject {
