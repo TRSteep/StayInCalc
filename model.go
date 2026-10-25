@@ -202,6 +202,43 @@ type Store struct {
 func (s *Store) countriesPath() string { return filepath.Join(s.Dir, "countries.json") }
 func (s *Store) profilesDir() string   { return filepath.Join(s.Dir, "profiles") }
 
+type appState struct {
+	LastProfile string `json:"last_profile"`
+}
+
+func (s *Store) LastProfile() (string, error) {
+	b, err := os.ReadFile(filepath.Join(s.Dir, "settings.json"))
+	if errors.Is(err, os.ErrNotExist) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	var state appState
+	if err := json.Unmarshal(b, &state); err != nil {
+		return "", err
+	}
+	if state.LastProfile == "" {
+		return "", nil
+	}
+	if filepath.Base(state.LastProfile) != state.LastProfile {
+		return "", errors.New("некорректное имя последнего профиля")
+	}
+	return filepath.Join(s.profilesDir(), state.LastProfile), nil
+}
+
+func (s *Store) SaveLastProfile(profileFile string) error {
+	name := ""
+	if profileFile != "" {
+		name = filepath.Base(profileFile)
+	}
+	b, err := json.MarshalIndent(appState{LastProfile: name}, "", "  ")
+	if err != nil {
+		return err
+	}
+	return writeAtomic(filepath.Join(s.Dir, "settings.json"), b)
+}
+
 func (s *Store) Init() error {
 	if err := os.MkdirAll(s.profilesDir(), 0o755); err != nil {
 		return err

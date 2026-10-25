@@ -128,11 +128,11 @@ func returnPlans(b *strings.Builder, trips []Trip, rule *Rule, r Result, cp *Cap
 		if plan.OutsideDays == 0 {
 			gap = "без полных дней вне страны"
 		}
-		fmt.Fprintf(b, "**На %s** — %s.\n\nВъезд **%s** → пребывание до **%s**", label, gap, fd(plan.Entry), fd(plan.Exit))
+		fmt.Fprintf(b, "- **На %s** — %s. Въезд **%s** → пребывание до **%s**", label, gap, fd(plan.Entry), fd(plan.Exit))
 		if plan.Registered {
 			b.WriteString("; потребуется регистрация / продление")
 		}
-		b.WriteString(".\n\n")
+		b.WriteString(".\n")
 	}
 	b.WriteString("\n")
 }

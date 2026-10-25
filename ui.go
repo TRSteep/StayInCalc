@@ -201,6 +201,13 @@ func (u *UI) dateField(iso string, onValid func(string)) (fyne.CanvasObject, *wi
 // ---------- Профили ----------
 
 func (u *UI) reloadProfiles(selectFile string) {
+	if selectFile == "" {
+		var err error
+		selectFile, err = u.store.LastProfile()
+		if err != nil {
+			dialog.ShowError(fmt.Errorf("настройки последнего профиля: %w", err), u.win)
+		}
+	}
 	ps, err := u.store.ListProfiles()
 	if err != nil {
 		dialog.ShowError(err, u.win)
@@ -247,6 +254,9 @@ func (u *UI) reloadProfiles(selectFile string) {
 }
 
 func (u *UI) selectProfile(p *Profile) {
+	if err := u.store.SaveLastProfile(p.file); err != nil {
+		dialog.ShowError(err, u.win)
+	}
 	u.cur = nil // чтобы OnChanged гражданства не перезаписал профиль
 	u.citizenship.SetText(p.Citizenship)
 	u.cur = p
@@ -574,16 +584,26 @@ func (u *UI) recalc() {
 		}
 		body := widget.NewRichTextFromMarkdown(section)
 		body.Segments = styleReportSegments(body.Segments)
+		if title != "" {
+			style := widget.RichTextStyleHeading
+			style.SizeName = reportTitleSize
+			body.Segments = append([]widget.RichTextSegment{&widget.TextSegment{Text: title, Style: style}}, body.Segments...)
+		}
 		body.Wrapping = fyne.TextWrapWord
 		bodyTheme := reportTheme{u.app.Settings().Theme()}
-		u.result.Add(widget.NewCard(title, "", container.NewPadded(container.NewThemeOverride(body, bodyTheme))))
+		u.result.Add(widget.NewCard("", "", container.NewPadded(container.NewThemeOverride(body, bodyTheme))))
 	}
 }
+
+const reportTitleSize fyne.ThemeSizeName = "staycalc.cardTitle"
 
 // Акценты наследуют цвет выбранной темы и масштабируются вместе с интерфейсом.
 type reportTheme struct{ fyne.Theme }
 
 func (t reportTheme) Size(name fyne.ThemeSizeName) float32 {
+	if name == reportTitleSize {
+		return 24
+	}
 	if name == theme.SizeNameHeadingText {
 		return 26
 	}
@@ -600,11 +620,20 @@ func styleReportSegments(segments []widget.RichTextSegment) []widget.RichTextSeg
 		case *widget.ParagraphSegment:
 			s.Texts = styleReportSegments(s.Texts)
 		case *widget.TextSegment:
-			if s.Text == "Возвращение на 14 дней или месяц" || strings.HasPrefix(s.Text, "На месяц (30 дней)") {
+			if s.Text == "Возвращение на 14 дней или месяц" {
 				// Непустой пробельный сегмент даёт видимую пустую строку в Fyne.
 				out = append(out, &widget.TextSegment{Text: " ", Style: widget.RichTextStyleParagraph})
 			}
 			if s.Style.SizeName == theme.SizeNameHeadingText {
+				const prefix = "Выехать не позднее: "
+				if date, ok := strings.CutPrefix(s.Text, prefix); ok {
+					labelStyle, dateStyle := s.Style, s.Style
+					labelStyle.Inline, dateStyle.Inline = true, true
+					labelStyle.ColorName = theme.ColorNameForeground
+					dateStyle.ColorName = theme.ColorNamePrimary
+					out = append(out, &widget.TextSegment{Text: prefix, Style: labelStyle}, &widget.TextSegment{Text: date, Style: dateStyle}, &widget.TextSegment{Style: widget.RichTextStyleParagraph})
+					continue
+				}
 				s.Style.ColorName = theme.ColorNamePrimary
 			}
 			if s.Style.TextStyle.Bold && strings.HasSuffix(strings.TrimSpace(previous), "осталось") {

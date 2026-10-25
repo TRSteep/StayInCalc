@@ -179,6 +179,38 @@ func TestDuplicateProfileSelection(t *testing.T) {
 	}
 }
 
+func TestRestoresLastOpenedProfile(t *testing.T) {
+	s := &Store{Dir: t.TempDir()}
+	if err := s.Init(); err != nil {
+		t.Fatal(err)
+	}
+	first, err := s.NewProfile("Иван", "RU")
+	if err != nil {
+		t.Fatal(err)
+	}
+	second, err := s.NewProfile("Иван", "BY")
+	if err != nil {
+		t.Fatal(err)
+	}
+	u := newUI(test.NewApp(), s)
+	u.reloadProfiles(second.file)
+	reopened := newUI(test.NewApp(), s)
+	if reopened.cur == nil || reopened.cur.file != second.file || reopened.citizenship.Text != "BY" {
+		t.Fatal("last selected profile was not restored")
+	}
+	if err := s.DeleteProfile(second); err != nil {
+		t.Fatal(err)
+	}
+	fallback := newUI(test.NewApp(), s)
+	if fallback.cur == nil || fallback.cur.file != first.file {
+		t.Fatal("missing profile did not fall back to an existing one")
+	}
+	last, err := s.LastProfile()
+	if err != nil || last != first.file {
+		t.Fatalf("fallback not saved: %q, %v", last, err)
+	}
+}
+
 func TestDateFieldDoesNotCalculateWithStaleInput(t *testing.T) {
 	s := &Store{Dir: t.TempDir()}
 	if err := s.Init(); err != nil {
