@@ -16,6 +16,10 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
+// Расстояние между информационными карточками в единицах Fyne (масштабируется с DPI).
+// Увеличьте значение для более свободной компоновки; 0 убирает промежуток.
+const reportCardGap float32 = 2
+
 type UI struct {
 	app   fyne.App
 	win   fyne.Window
@@ -140,7 +144,7 @@ func (u *UI) build() {
 			container.NewVScroll(u.carBox))),
 	)
 
-	u.result = container.NewVBox()
+	u.result = container.New(layout.NewCustomPaddedVBoxLayout(reportCardGap))
 
 	// Левая панель занимает минимальную ширину, необходимую всем её полям.
 	// Border растягивает только отчёт; ширина дат не зависит от ширины окна.

@@ -287,8 +287,7 @@ func (u *UI) report() string {
 	}
 
 	// --- Человек ---
-	general := b.String()
-	b.Reset()
+	b.WriteString("\n---\n\n")
 	lim := rule.Limits
 	registered := curTrip != nil && curTrip.Registered
 	regLim := lim
@@ -389,6 +388,5 @@ func (u *UI) report() string {
 			fmt.Fprintf(&b, "\nИсточник: %s\n", rule.Vehicle.Source)
 		}
 	}
-	b.WriteString("\n---\n\n" + general)
 	return b.String()
 }
