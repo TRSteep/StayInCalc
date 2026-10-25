@@ -22,6 +22,8 @@ func visaRunBlock(b *strings.Builder, rule *Rule, r Result) {
 		total = append(total, fmt.Sprintf("%d дней за %s", rule.MaxPerYear, year))
 	}
 	switch {
+	case rule.Limits.unlimited() && rule.Registration.Required:
+		b.WriteString("**Визаран: для обнуления общего лимита дней не требуется.** Соблюдайте условия регистрации; новый въезд не заменяет её оформление. ")
 	case vr.MaxPerYear > 0 && r.EntriesInYear >= vr.MaxPerYear:
 		b.WriteString("**Визаран: новый въезд в этом году недоступен по лимиту въездов.** ")
 	case vr.Allowed && perEntry:
@@ -30,7 +32,7 @@ func visaRunBlock(b *strings.Builder, rule *Rule, r Result) {
 		} else {
 			b.WriteString("**Визаран: возможен по правилу срока за въезд.** ")
 		}
-		fmt.Fprintf(b, "Новый въезд начинает новый срок: %s. ", limitsText(Limits{MaxConsecutive: rule.MaxConsecutive, MaxConsecutiveMonths: rule.MaxConsecutiveMonths}))
+		fmt.Fprintf(b, "Новый въезд начинает новый срок: %s. ", limitsText(Limits{MaxConsecutive: rule.MaxConsecutive, MaxConsecutiveMonths: rule.MaxConsecutiveMonths, ExcludeEntryDay: rule.ExcludeEntryDay}))
 		if vr.MinDaysOutside > 0 {
 			fmt.Fprintf(b, "Для обнуления счётчика нужно минимум **%d полных дней вне страны**. ", vr.MinDaysOutside)
 		} else {

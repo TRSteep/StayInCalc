@@ -104,6 +104,9 @@ type Usage struct {
 func (p *presence) usage(d int, lim Limits, resetGap int) Usage {
 	var u Usage
 	u.Consecutive, _ = p.consecutive(d, resetGap)
+	if lim.ExcludeEntryDay && u.Consecutive > 0 {
+		u.Consecutive--
+	}
 	if lim.PeriodDays > 0 {
 		u.InPeriod = p.count(d-lim.PeriodDays+1, d)
 	}

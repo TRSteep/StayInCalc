@@ -37,6 +37,9 @@ func limitsText(l Limits) string {
 	}
 	if l.MaxConsecutive > 0 {
 		parts = append(parts, fmt.Sprintf("до %d дн. подряд", l.MaxConsecutive))
+		if l.ExcludeEntryDay {
+			parts = append(parts, "со следующего дня после въезда")
+		}
 	}
 	if l.MaxInPeriod > 0 {
 		parts = append(parts, fmt.Sprintf("%d дн. из %d", l.MaxInPeriod, l.PeriodDays))
@@ -101,7 +104,11 @@ func stayUsage(b *strings.Builder, r Result, lim Limits, who string, cp *Cap) {
 		fmt.Fprintf(b, "- Статус: на %s %s вне страны\n", ref, who)
 	}
 	if r.InCountry && lim.MaxConsecutive > 0 {
-		usageLine(b, "Дней подряд", r.Used.Consecutive, lim.MaxConsecutive, r.Remaining.Consecutive)
+		title := "Дней подряд"
+		if lim.ExcludeEntryDay {
+			title = "Дней срока (без дня въезда)"
+		}
+		usageLine(b, title, r.Used.Consecutive, lim.MaxConsecutive, r.Remaining.Consecutive)
 	}
 	if lim.PeriodDays > 0 {
 		usageLine(b, fmt.Sprintf("За последние %d дней", lim.PeriodDays), r.Used.InPeriod, lim.MaxInPeriod, r.Remaining.InPeriod)
@@ -137,7 +144,9 @@ func stayDecision(b *strings.Builder, r Result, who string, cp *Cap) {
 			fmt.Fprintf(b, "# При въезде можно находиться до: %s\n\nВъезд: **%s**. Включительно: **%d дн.** Причина: %s.\n\n",
 				fd(cp.Date), ref, left+1, cp.Reason)
 		}
-		if r.ForecastLimited || r.Unlimited {
+		if r.Unlimited {
+			fmt.Fprintf(b, "**%s:** пребывание в пределах срока действующей регистрации. Дата её окончания в профиле не задана.\n\n", cp.Alt)
+		} else if r.ForecastLimited {
 			fmt.Fprintf(b, "**%s:** в пределах расчёта до %s предел срока не найден.\n\n", cp.Alt, fd(r.LatestExit))
 		} else {
 			if r.Overstay {
@@ -254,7 +263,11 @@ func (u *UI) report() string {
 		b.WriteString(" — " + rule.VisaNote)
 	}
 	b.WriteString("\n")
-	fmt.Fprintf(&b, "- Срок: %s\n", limitsText(rule.Limits))
+	if rule.Limits.unlimited() && rule.Registration.Required {
+		b.WriteString("- Срок: определяется условиями и сроком действующей регистрации\n")
+	} else {
+		fmt.Fprintf(&b, "- Срок: %s\n", limitsText(rule.Limits))
+	}
 
 	vr := rule.VisaRun
 
@@ -319,7 +332,11 @@ func (u *UI) report() string {
 	}
 
 	r := evaluate(trips, lim, resetGap(rule), u.refDate, rawRule)
-	stayDecision(&b, r, "вы", regCap)
+	if r.Error == nil && r.Unlimited && regCap == nil && reg.Required {
+		b.WriteString("**Срок пребывания — до окончания действующей регистрации.** Дата окончания регистрации в профиле не задана; точная дата выезда автоматически не определяется.\n\n")
+	} else {
+		stayDecision(&b, r, "вы", regCap)
+	}
 	if r.Error == nil {
 		visaRunBlock(&b, rawRule.ForEntry(u.refDate.Format(dateISO)), r)
 	}

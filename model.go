@@ -70,6 +70,7 @@ func (r *Rule) ForEntry(entry string) *Rule {
 
 // Limits — числовые ограничения. 0 означает «не ограничено».
 type Limits struct {
+	ExcludeEntryDay      bool   `json:"exclude_entry_day,omitempty"` // день въезда не расходует лимит дней подряд
 	MaxConsecutiveMonths int    `json:"max_consecutive_months,omitempty"`
 	MaxConsecutive       int    `json:"max_consecutive"` // макс. дней подряд за один въезд
 	MaxInPeriod          int    `json:"max_in_period"`   // макс. дней в скользящем периоде...
@@ -131,6 +132,9 @@ func (c *Country) RuleFor(citizenship string) (*Rule, bool) {
 
 // Merge накладывает ненулевые значения o поверх l.
 func (l Limits) Merge(o Limits) Limits {
+	if o.ExcludeEntryDay {
+		l.ExcludeEntryDay = true
+	}
 	if o.MaxConsecutiveMonths > 0 {
 		l.MaxConsecutiveMonths = o.MaxConsecutiveMonths
 	}

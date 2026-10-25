@@ -10,6 +10,7 @@ var citizenshipNames = map[string]string{
 	"AM": "Армения", "KG": "Кыргызстан", "GE": "Грузия", "AL": "Албания",
 	"TR": "Турция", "TH": "Таиланд", "VN": "Вьетнам", "AE": "ОАЭ", "RS": "Сербия",
 	"UZ": "Узбекистан", "TJ": "Таджикистан", "AZ": "Азербайджан", "MD": "Молдова",
+	"CN": "Китай",
 }
 
 func citizenshipLabel(code string) string {
