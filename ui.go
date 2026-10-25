@@ -31,13 +31,14 @@ type UI struct {
 	country   *Country
 	refDate   time.Time
 
-	profileSel  *widget.Select
-	countrySel  *widget.Select
-	citizenship *widget.Select
-	refEntry    *widget.Entry
-	tripsBox    *fyne.Container
-	carBox      *fyne.Container
-	result      *fyne.Container
+	profileSel     *widget.Select
+	countrySel     *widget.Select
+	citizenship    *widget.Select
+	vehicleCountry *widget.Select
+	refEntry       *widget.Entry
+	tripsBox       *fyne.Container
+	carBox         *fyne.Container
+	result         *fyne.Container
 }
 
 func runUI(a fyne.App, store *Store) {
@@ -133,6 +134,23 @@ func (u *UI) build() {
 	addTrip := widget.NewButtonWithIcon("Добавить поездку", theme.ContentAddIcon(), func() { u.addRow(false) })
 	addCar := widget.NewButtonWithIcon("Добавить въезд машины", theme.ContentAddIcon(), func() { u.addRow(true) })
 	copyCar := widget.NewButton("Скопировать даты из поездок", u.copyTripsToCar)
+	u.vehicleCountry = widget.NewSelect(u.vehicleCountryOptions(), func(label string) {
+		if u.cur == nil {
+			return
+		}
+		code := ""
+		if label != vehicleCountryUnknown {
+			code = citizenshipCode(label)
+		}
+		u.cur.VehicleRegistrationCountry = code
+		u.save()
+		u.recalc()
+	})
+	u.vehicleCountry.PlaceHolder = vehicleCountryUnknown
+	carHint := widget.NewLabel("Туристическая поездка без ВНЖ. Страна номеров может отличаться от гражданства.")
+	carHint.Wrapping = fyne.TextWrapWord
+	carHint.Importance = widget.LowImportance
+	carTop := container.NewVBox(container.NewHBox(widget.NewLabel("Страна регистрации авто:"), sized(u.vehicleCountry, 220)), carHint)
 
 	hint := widget.NewLabel("Даты: ДД.ММ.ГГГГ. Пустая дата выезда — вы ещё в стране.\nДень въезда и день выезда считаются днями пребывания.")
 	hint.Importance = widget.LowImportance
@@ -140,7 +158,7 @@ func (u *UI) build() {
 	tabs := container.NewAppTabs(
 		container.NewTabItem("Пребывание", container.NewBorder(nil, container.NewVBox(addTrip, hint), nil, nil,
 			container.NewVScroll(u.tripsBox))),
-		container.NewTabItem("Автомобиль", container.NewBorder(nil, container.NewHBox(addCar, copyCar), nil, nil,
+		container.NewTabItem("Автомобиль", container.NewBorder(carTop, container.NewHBox(addCar, copyCar), nil, nil,
 			container.NewVScroll(u.carBox))),
 	)
 
@@ -240,6 +258,7 @@ func (u *UI) reloadProfiles(selectFile string) {
 	switch {
 	case len(ps) == 0:
 		u.cur = nil
+		u.vehicleCountry.ClearSelected()
 		u.profileSel.ClearSelected()
 		u.rebuildTrips()
 		u.recalc()
@@ -261,6 +280,9 @@ func (u *UI) selectProfile(p *Profile) {
 		dialog.ShowError(err, u.win)
 	}
 	u.cur = nil // чтобы OnChanged гражданства не перезаписал профиль
+	u.vehicleCountry.Options = u.vehicleCountryOptions()
+	u.vehicleCountry.Refresh()
+	u.vehicleCountry.SetSelected(vehicleCountryLabel(p.VehicleRegistrationCountry))
 	u.citizenship.Options = u.citizenshipOptions()
 	u.citizenship.Refresh()
 	if p.Citizenship == "" {
@@ -552,6 +574,8 @@ func (u *UI) applyCountries(cf *CountriesFile) {
 	}
 	u.countries = cf
 	u.country = nil
+	u.vehicleCountry.Options = u.vehicleCountryOptions()
+	u.vehicleCountry.Refresh()
 	u.citizenship.Options = u.citizenshipOptions()
 	u.citizenship.Refresh()
 	u.fillCountries()

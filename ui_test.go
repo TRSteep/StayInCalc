@@ -21,6 +21,7 @@ func TestUISnapshot(t *testing.T) {
 	}
 	p, _ := s.NewProfile("Иван", "RU")
 	p.LastCountry = "TR"
+	p.VehicleRegistrationCountry = "RU"
 	p.Trips["TR"] = []Trip{{Entry: "2026-05-01", Exit: "2026-06-15"}, {Entry: "2026-09-20", Registered: false}}
 	p.CarTrips["TR"] = []Trip{{Entry: "2026-05-01", Exit: "2026-06-15"}, {Entry: "2026-09-20"}}
 	s.SaveProfile(p)

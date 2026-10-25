@@ -224,8 +224,9 @@ type Trip struct {
 }
 
 type Profile struct {
-	Name        string `json:"name"`
-	Citizenship string `json:"citizenship"` // код ISO, например RU
+	Name                       string `json:"name"`
+	Citizenship                string `json:"citizenship"`                            // код ISO, например RU
+	VehicleRegistrationCountry string `json:"vehicle_registration_country,omitempty"` // страна номеров, независимо от гражданства
 	// Поездки и въезды машины, сгруппированные по id страны из countries.json.
 	Trips       map[string][]Trip `json:"trips"`
 	CarTrips    map[string][]Trip `json:"car_trips"`
@@ -343,6 +344,7 @@ func (s *Store) loadProfile(path string) (*Profile, error) {
 }
 
 func (p *Profile) normalize() {
+	p.VehicleRegistrationCountry = strings.ToUpper(strings.TrimSpace(p.VehicleRegistrationCountry))
 	if p.Trips == nil {
 		p.Trips = map[string][]Trip{}
 	}

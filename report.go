@@ -380,9 +380,21 @@ func (u *UI) report() string {
 	}
 	if hasCar {
 		b.WriteString("\n---\n\n## Автомобиль\n\n")
-		cr := Evaluate(carTrips, vl, 0, u.refDate) // срок машины идёт с каждого пересечения границы
-		if rule.Vehicle.Manual {
-			b.WriteString("**Срок автомобиля требует проверки по документам ввоза.** Автоматическая дата выезда не определяется.\n\n")
+		fmt.Fprintf(&b, "Страна регистрации: **%s**. Туристическая поездка без ВНЖ.\n\n", vehicleCountryLabel(u.cur.VehicleRegistrationCountry))
+		localRegistration := u.cur.VehicleRegistrationCountry == u.country.ID
+		if localRegistration {
+			vl = Limits{}
+		}
+		cr := Evaluate(carTrips, vl, 0, u.refDate)
+		if localRegistration || rule.Vehicle.Manual {
+			if localRegistration {
+				b.WriteString("**Местная регистрация автомобиля.** Срок туристического ввоза для иностранных номеров здесь не применяется.\n\n")
+			} else {
+				if u.cur.VehicleRegistrationCountry == "" {
+					b.WriteString("**Выберите страну регистрации во вкладке «Автомобиль».**\n\n")
+				}
+				b.WriteString("**Срок туристического ввоза зависит от условий страны.** Для точной даты вывоза нужны применимые условия и срок, предоставленный на границе. Автоматический расчёт пока не выполняется.\n\n")
+			}
 			if cr.Error != nil {
 				fmt.Fprintf(&b, "Ошибка данных: %s.\n\n", cr.Error)
 			} else {
@@ -397,8 +409,10 @@ func (u *UI) report() string {
 			stayBlock(&b, cr, vl, "машина", nil)
 			fmt.Fprintf(&b, "Временный ввоз: %s.\n\n", limitsText(vl))
 		}
-		fmt.Fprintf(&b, "%s\n", rule.Vehicle.Note)
-		if rule.Vehicle.Source != "" {
+		if !localRegistration {
+			fmt.Fprintf(&b, "%s\n", rule.Vehicle.Note)
+		}
+		if !localRegistration && rule.Vehicle.Source != "" {
 			fmt.Fprintf(&b, "\nИсточник: %s\n", sourceLinks(rule.Vehicle.Source))
 		}
 	}

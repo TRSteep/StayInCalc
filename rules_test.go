@@ -121,3 +121,41 @@ func TestCitizenshipSelectPreservesCodes(t *testing.T) {
 		t.Fatal(u.report())
 	}
 }
+
+func TestVehicleRegistrationIsIndependentAndSaved(t *testing.T) {
+	s := &Store{Dir: t.TempDir()}
+	if err := s.Init(); err != nil {
+		t.Fatal(err)
+	}
+	p, err := s.NewProfile("Водитель", "RU")
+	if err != nil {
+		t.Fatal(err)
+	}
+	u := newUI(test.NewApp(), s)
+	if u.vehicleCountry.Selected != vehicleCountryUnknown {
+		t.Fatal("guessed vehicle country from citizenship")
+	}
+	u.vehicleCountry.SetSelected(vehicleCountryLabel("BY"))
+	stored, err := s.loadProfile(p.file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stored.VehicleRegistrationCountry != "BY" || stored.Citizenship != "RU" {
+		t.Fatalf("independent values were not saved: %+v", stored)
+	}
+	u.reloadProfiles(p.file)
+	if u.vehicleCountry.Selected != vehicleCountryLabel("BY") {
+		t.Fatal("vehicle country was not restored")
+	}
+	u.countrySel.SetSelected("Турция")
+	u.cur.CarTrips["TR"] = []Trip{{Entry: "2026-10-01"}}
+	u.vehicleCountry.SetSelected(vehicleCountryLabel("TR"))
+	report := u.report()
+	if !strings.Contains(report, "Местная регистрация автомобиля") || strings.Contains(report, "Срок туристического ввоза зависит") {
+		t.Fatal(report)
+	}
+	u.vehicleCountry.SetSelected(vehicleCountryUnknown)
+	if u.cur.VehicleRegistrationCountry != "" {
+		t.Fatal("could not clear vehicle registration")
+	}
+}
