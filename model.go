@@ -26,9 +26,17 @@ type CountriesFile struct {
 
 // Country — страна или зона с общим счётчиком дней (например, Шенгенская зона).
 type Country struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Rules []Rule `json:"rules"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	StayGroup string `json:"stay_group,omitempty"` // общий список поездок человека, например SCHENGEN
+	Rules     []Rule `json:"rules"`
+}
+
+func (c *Country) stayKey() string {
+	if c.StayGroup != "" {
+		return c.StayGroup
+	}
+	return c.ID
 }
 
 // Rule — правила для группы гражданств. Применяется первое правило,
@@ -218,6 +226,21 @@ func ParseCountries(data []byte) (*CountriesFile, error) {
 					return nil, fmt.Errorf("страна %s: year_mode должен быть \"calendar\" или \"rolling\"", c.ID)
 				}
 			}
+		}
+	}
+	for _, c := range cf.Countries {
+		if c.StayGroup == "" {
+			continue
+		}
+		valid := false
+		for _, group := range cf.Countries {
+			if group.ID == c.StayGroup && group.ID != c.ID && group.StayGroup == "" {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			return nil, fmt.Errorf("страна %s: stay_group должен ссылаться на отдельную страну/зону без собственной группы", c.ID)
 		}
 	}
 	return &cf, nil

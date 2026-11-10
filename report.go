@@ -252,7 +252,7 @@ func (u *UI) report() string {
 		return b.String()
 	}
 	rawRule := rule
-	trips := u.cur.Trips[u.country.ID]
+	trips := u.cur.Trips[u.country.stayKey()]
 	var curTrip *Trip
 	refD := dayNum(u.refDate)
 	for i := range trips {

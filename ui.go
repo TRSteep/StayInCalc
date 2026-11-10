@@ -375,11 +375,19 @@ func (u *UI) tripsMap(car bool) map[string][]Trip {
 	return u.cur.Trips
 }
 
+func (u *UI) tripKey(car bool) string {
+	if car {
+		return u.country.ID
+	}
+	return u.country.stayKey()
+}
+
 func (u *UI) ensureEmptyRow(car bool) {
 	m := u.tripsMap(car)
-	list := m[u.country.ID]
+	key := u.tripKey(car)
+	list := m[key]
 	if n := len(list); n == 0 || list[n-1].Exit != "" {
-		m[u.country.ID] = append(list, Trip{})
+		m[key] = append(list, Trip{})
 	}
 }
 
@@ -396,7 +404,19 @@ func (u *UI) rebuildTrips() {
 			box = u.carBox
 		}
 		u.ensureEmptyRow(car)
-		list := u.tripsMap(car)[u.country.ID]
+		if !car && u.country.StayGroup != "" {
+			groupName := u.country.StayGroup
+			for _, group := range u.countries.Countries {
+				if group.ID == u.country.StayGroup {
+					groupName = group.Name
+					break
+				}
+			}
+			hint := widget.NewLabel("Общий учёт: " + groupName + ". Указывайте въезд/выезд всей зоны, включая поездки в другие её страны.")
+			hint.Wrapping = fyne.TextWrapWord
+			box.Add(hint)
+		}
+		list := u.tripsMap(car)[u.tripKey(car)]
 		for i := range list {
 			box.Add(u.tripRow(car, i))
 		}
@@ -404,7 +424,7 @@ func (u *UI) rebuildTrips() {
 }
 
 func (u *UI) tripRow(car bool, i int) fyne.CanvasObject {
-	cid := u.country.ID
+	cid := u.tripKey(car)
 	get := func() *Trip {
 		l := u.tripsMap(car)[cid]
 		if i < len(l) {
@@ -475,7 +495,8 @@ func (u *UI) addRow(car bool) {
 		return
 	}
 	m := u.tripsMap(car)
-	m[u.country.ID] = append(m[u.country.ID], Trip{})
+	key := u.tripKey(car)
+	m[key] = append(m[key], Trip{})
 	u.rebuildTrips()
 }
 
@@ -484,7 +505,7 @@ func (u *UI) copyTripsToCar() {
 		return
 	}
 	var l []Trip
-	for _, t := range u.cur.Trips[u.country.ID] {
+	for _, t := range u.cur.Trips[u.country.stayKey()] {
 		if t.Entry != "" {
 			l = append(l, Trip{Entry: t.Entry, Exit: t.Exit})
 		}

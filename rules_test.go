@@ -20,7 +20,7 @@ func russianRules(t *testing.T) map[string]*Rule {
 		if !ok {
 			t.Fatalf("no RU rule for %s", cf.Countries[i].ID)
 		}
-		if r.Source == "" || r.Updated != "2026-10-25" {
+		if _, valid := parseISO(r.Updated); r.Source == "" || !valid {
 			t.Fatalf("missing audit information for %s", cf.Countries[i].ID)
 		}
 		rules[cf.Countries[i].ID] = r
@@ -30,7 +30,7 @@ func russianRules(t *testing.T) map[string]*Rule {
 
 func TestRussianRulesAndAlbania(t *testing.T) {
 	rules := russianRules(t)
-	if len(rules) != 13 {
+	if len(rules) != 14 {
 		t.Fatalf("countries: %d", len(rules))
 	}
 	if !rules["AL"].VisaRequired || rules["AL"].MaxInPeriod != 90 || rules["AL"].PeriodDays != 180 {

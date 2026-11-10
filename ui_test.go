@@ -27,10 +27,21 @@ func TestUISnapshot(t *testing.T) {
 	}
 	p.LastCountry = country
 	p.VehicleRegistrationCountry = "RU"
-	p.Trips[country] = []Trip{{Entry: "2026-05-01", Exit: "2026-06-15"}, {Entry: "2026-09-20", Registered: false}}
+	stayKey := country
+	cf, err := s.LoadCountries()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range cf.Countries {
+		if c.ID == country {
+			stayKey = c.stayKey()
+			break
+		}
+	}
+	p.Trips[stayKey] = []Trip{{Entry: "2026-05-01", Exit: "2026-06-15"}, {Entry: "2026-09-20", Registered: false}}
 	p.CarTrips[country] = []Trip{{Entry: "2026-05-01", Exit: "2026-06-15"}, {Entry: "2026-09-20"}}
 	if os.Getenv("SNAPSHOT_EXAMPLE") == "KZ_RETURN" {
-		p.Trips[country] = []Trip{{Entry: "2026-08-05", Exit: "2026-11-02"}}
+		p.Trips[stayKey] = []Trip{{Entry: "2026-08-05", Exit: "2026-11-02"}}
 		p.CarTrips[country] = nil
 	}
 	s.SaveProfile(p)
