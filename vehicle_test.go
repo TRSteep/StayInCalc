@@ -24,7 +24,7 @@ func TestKazakhstanRussianVehicleUsesCalendarYear(t *testing.T) {
 	u := kazakhstanVehicleUI(t, "2024-06-29", []Trip{{Entry: "2023-07-01"}})
 	report := u.report()
 	car := strings.Split(report, "## Автомобиль")[1]
-	if !strings.Contains(car, "# Выехать не позднее: 30.06.2024") || strings.Contains(car, "Автоматический расчёт пока не выполняется") {
+	if !strings.Contains(car, "# Выехать не позднее: 2024.06.30") || strings.Contains(car, "Автоматический расчёт пока не выполняется") {
 		t.Fatal(car)
 	}
 	if !strings.Contains(car, "30 календарных дней") {
@@ -46,7 +46,7 @@ func TestVehicleRequiredAbsenceAfterFullYear(t *testing.T) {
 	}
 	u := kazakhstanVehicleUI(t, "2024-07-05", trips)
 	car := strings.Split(u.report(), "## Автомобиль")[1]
-	if !strings.Contains(car, "Нарушен обязательный перерыв") || strings.Contains(car, "# Выехать не позднее: 30.06.2025") {
+	if !strings.Contains(car, "Нарушен обязательный перерыв") || strings.Contains(car, "# Выехать не позднее: 2025.06.30") {
 		t.Fatal(car)
 	}
 	trips[1].Entry = "2024-07-31"
@@ -66,7 +66,7 @@ func TestVehicleShortTripDoesNotRequireThirtyDays(t *testing.T) {
 func TestVehicleOverstayReturnRespectsAbsence(t *testing.T) {
 	u := kazakhstanVehicleUI(t, "2024-07-01", []Trip{{Entry: "2023-07-01"}})
 	car := strings.Split(u.report(), "## Автомобиль")[1]
-	if !strings.Contains(car, "ПРЕВЫШЕНИЕ СРОКА") || !strings.Contains(car, "Ближайший возможный въезд: 01.08.2024") {
+	if !strings.Contains(car, "ПРЕВЫШЕНИЕ СРОКА") || !strings.Contains(car, "Ближайший возможный въезд: 2024.08.01") {
 		t.Fatal(car)
 	}
 }

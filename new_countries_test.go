@@ -42,7 +42,7 @@ func TestUzbekistanRegistrationReport(t *testing.T) {
 	u.countrySel.SetSelected("Узбекистан")
 	u.cur.Trips["UZ"] = []Trip{{Entry: "2026-10-01"}}
 	report := u.report()
-	if !strings.Contains(report, "Выехать не позднее: 15.10.2026") || strings.Contains(report, "Ограничений по сроку нет") {
+	if !strings.Contains(report, "Выехать не позднее: 2026.10.15") || strings.Contains(report, "Ограничений по сроку нет") {
 		t.Fatal(report)
 	}
 	u.cur.Trips["UZ"][0].Registered = true

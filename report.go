@@ -3,12 +3,28 @@ package main
 import (
 	"fmt"
 	"net/url"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
 )
 
 func fd(t time.Time) string { return t.Format(dateUI) }
+
+// Старые пользовательские правила тоже выводятся в новом формате; URL сохраняются.
+var displayDatePattern = regexp.MustCompile(`https?://[^\s<>]+|\b(?:\d{2}\.\d{2}\.\d{4}|\d{4}-\d{2}-\d{2})\b`)
+
+func displayDates(text string) string {
+	return displayDatePattern.ReplaceAllStringFunc(text, func(value string) string {
+		if strings.HasPrefix(value, "http://") || strings.HasPrefix(value, "https://") {
+			return value
+		}
+		if date, ok := parseUserDate(value); ok {
+			return fd(date)
+		}
+		return value
+	})
+}
 
 // Источник может содержать несколько URL через пробел или « ; ».
 // Markdown-ссылки Fyne открывает системным браузером при нажатии.
@@ -216,7 +232,7 @@ func (u *UI) report() string {
 	var b strings.Builder
 	if u.refEntry != nil {
 		if _, ok := parseUserDate(u.refEntry.Text); !ok {
-			return "**Ошибка даты расчёта.** Введите дату в формате ДД.ММ.ГГГГ."
+			return "**Ошибка даты расчёта.** Введите дату в формате ГГГГ.ММ.ДД."
 		}
 	}
 	if u.cur == nil {
@@ -260,7 +276,7 @@ func (u *UI) report() string {
 		b.WriteString("- Виза: не требуется")
 	}
 	if rule.VisaNote != "" {
-		b.WriteString(" — " + rule.VisaNote)
+		b.WriteString(" — " + displayDates(rule.VisaNote))
 	}
 	b.WriteString("\n")
 	if rule.Limits.unlimited() && rule.Registration.Required {
@@ -288,14 +304,14 @@ func (u *UI) report() string {
 		b.WriteString("; срок не увеличивает")
 	}
 	if reg.Note != "" {
-		b.WriteString(" — " + reg.Note)
+		b.WriteString(" — " + displayDates(reg.Note))
 	}
 	b.WriteString("\n")
 	if rule.Notes != "" {
-		fmt.Fprintf(&b, "- Примечание: %s\n", rule.Notes)
+		fmt.Fprintf(&b, "- Примечание: %s\n", displayDates(rule.Notes))
 	}
 	if rule.Updated != "" || rule.Source != "" {
-		fmt.Fprintf(&b, "- Источник: %s %s\n", sourceLinks(rule.Source), rule.Updated)
+		fmt.Fprintf(&b, "- Источник: %s %s\n", sourceLinks(rule.Source), displayDates(rule.Updated))
 	}
 
 	// --- Человек ---
@@ -438,7 +454,7 @@ func (u *UI) report() string {
 			fmt.Fprintf(&b, "Временный ввоз: %s.\n\n", limitsText(vl))
 		}
 		if !localRegistration {
-			fmt.Fprintf(&b, "%s\n", vehicleRule.Note)
+			fmt.Fprintf(&b, "%s\n", displayDates(vehicleRule.Note))
 		}
 		if !localRegistration && vehicleRule.Source != "" {
 			fmt.Fprintf(&b, "\nИсточник: %s\n", sourceLinks(vehicleRule.Source))

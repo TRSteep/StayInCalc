@@ -62,6 +62,6 @@ func visaRunBlock(b *strings.Builder, rule *Rule, r Result) {
 	}
 	b.WriteString("Окончательное решение о допуске принимает пограничная служба.\n\n")
 	if vr.Note != "" {
-		fmt.Fprintf(b, "_%s_\n\n", vr.Note)
+		fmt.Fprintf(b, "_%s_\n\n", displayDates(vr.Note))
 	}
 }

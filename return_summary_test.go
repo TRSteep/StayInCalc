@@ -21,8 +21,8 @@ func TestKazakhstanTwoWeekEntryShowsFullStayAndConditionalReset(t *testing.T) {
 	r := evaluate(trips, rule.Limits, resetGap(rule), ref, rule)
 	returnPlans(&b, trips, rule, r, nil)
 	for _, text := range []string{
-		"## Возвращение", "# Ближайший возможный въезд на 2 недели: 01.02.2027",
-		"# Пребывание возможно до: 01.05.2027", "# Полное обнуление дней: 01.05.2027",
+		"## Возвращение", "# Ближайший возможный въезд на 2 недели: 2027.02.01",
+		"# Пребывание возможно до: 2027.05.01", "# Полное обнуление дней: 2027.05.01",
 		"если до неё оставаться вне страны", "нулевого счётчика в эту дату уже не будет",
 	} {
 		if !strings.Contains(b.String(), text) {

@@ -44,7 +44,7 @@ func TestUISnapshot(t *testing.T) {
 	u.profileSel.SetSelected("Иван")
 	refDate := os.Getenv("SNAPSHOT_DATE")
 	if refDate == "" {
-		refDate = "08.10.2026"
+		refDate = "2026.10.08"
 	}
 	u.refEntry.SetText(refDate)
 	u.win.Resize(fyne.NewSize(1250, 760))

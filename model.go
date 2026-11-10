@@ -259,7 +259,7 @@ type Profile struct {
 }
 
 const dateISO = "2006-01-02"
-const dateUI = "02.01.2006"
+const dateUI = "2006.01.02"
 
 type Store struct {
 	Dir string
@@ -460,10 +460,10 @@ func parseISO(s string) (time.Time, bool) {
 	return t, err == nil
 }
 
-// parseUserDate принимает ДД.ММ.ГГГГ (а также Д.М.ГГГГ и ГГГГ-ММ-ДД).
+// Основной формат — ГГГГ.ММ.ДД. Прежний ввод и ISO принимаются для совместимости.
 func parseUserDate(s string) (time.Time, bool) {
 	s = strings.TrimSpace(s)
-	for _, f := range []string{dateUI, "2.1.2006", dateISO} {
+	for _, f := range []string{dateUI, "2006.1.2", "02.01.2006", "2.1.2006", dateISO} {
 		if t, err := time.Parse(f, s); err == nil {
 			return t, true
 		}

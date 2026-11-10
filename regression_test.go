@@ -37,7 +37,7 @@ func TestRulesRejectInvalidLimits(t *testing.T) {
 func TestInvalidTripsStopForecast(t *testing.T) {
 	cases := map[string][]Trip{
 		"reversed":        {{Entry: "2026-02-02", Exit: "2026-02-01"}},
-		"invalid entry":   {{Entry: "31.02.2026"}},
+		"invalid entry":   {{Entry: "2026.02.31"}},
 		"invalid exit":    {{Entry: "2026-01-01", Exit: "2026-02-30"}},
 		"missing entry":   {{Exit: "2026-01-01"}},
 		"open overlap":    {{Entry: "2026-01-01"}, {Entry: "2026-02-01"}},
@@ -115,7 +115,7 @@ func TestUnlimitedDaysDoNotBypassEntryLimit(t *testing.T) {
 	r := evaluate([]Trip{{Entry: "2026-01-01", Exit: "2026-01-02"}}, Limits{}, 0, d("2026-12-31"), rule)
 	var b strings.Builder
 	stayBlock(&b, r, Limits{}, "вы", nil)
-	if !r.EntryBlocked || r.EarliestEntry == nil || *r.EarliestEntry != d("2027-01-01") || !strings.Contains(b.String(), "Въезд на 31.12.2026 невозможен") {
+	if !r.EntryBlocked || r.EarliestEntry == nil || *r.EarliestEntry != d("2027-01-01") || !strings.Contains(b.String(), "Въезд на 2026.12.31 невозможен") {
 		t.Fatal(b.String())
 	}
 }
@@ -125,7 +125,7 @@ func TestNextEntryHasOwnRegistrationDeadline(t *testing.T) {
 	r := evaluate([]Trip{{Entry: "2026-01-01", Exit: "2026-01-02", Registered: true}}, Limits{}, 0, d("2026-12-31"), rule)
 	var b strings.Builder
 	stayBlock(&b, r, Limits{}, "вы", nil)
-	if r.EarliestEntry == nil || r.StayFromEarly != d("2027-01-03") || !strings.Contains(b.String(), "до 03.01.2027 (3 дн.)") {
+	if r.EarliestEntry == nil || r.StayFromEarly != d("2027-01-03") || !strings.Contains(b.String(), "до 2027.01.03 (3 дн.)") {
 		t.Fatal(b.String())
 	}
 }
@@ -221,11 +221,11 @@ func TestDateFieldDoesNotCalculateWithStaleInput(t *testing.T) {
 	}
 	u := newUI(test.NewApp(), s)
 	_, entry := u.dateField("2026-01-01", func(raw string) { u.cur.Trips[u.country.ID] = []Trip{{Entry: raw}}; u.recalc() })
-	entry.SetText("31.02.2026")
+	entry.SetText("2026.02.31")
 	if !strings.Contains(u.report(), "Ошибка данных") {
 		t.Fatal(u.report())
 	}
-	entry.SetText("01.02.2026")
+	entry.SetText("2026.02.01")
 	if strings.Contains(u.report(), "Ошибка данных") {
 		t.Fatal(u.report())
 	}

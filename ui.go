@@ -153,7 +153,7 @@ func (u *UI) build() {
 	carHint.Importance = widget.LowImportance
 	carTop := container.NewVBox(container.NewHBox(widget.NewLabel("Страна регистрации авто:"), sized(u.vehicleCountry, 220)), carHint)
 
-	hint := widget.NewLabel("Даты: ДД.ММ.ГГГГ. Пустая дата выезда — вы ещё в стране.\nДень въезда и день выезда считаются днями пребывания.")
+	hint := widget.NewLabel("Даты: ГГГГ.ММ.ДД. Пустая дата выезда — вы ещё в стране.\nДень въезда и день выезда считаются днями пребывания.")
 	hint.Importance = widget.LowImportance
 
 	tabs := container.NewAppTabs(
@@ -180,14 +180,14 @@ func sized(o fyne.CanvasObject, w float32) fyne.CanvasObject {
 // как черновик, чтобы отчёт показывал ошибку вместо расчёта по старой дате.
 func (u *UI) dateField(iso string, onValid func(string)) (fyne.CanvasObject, *widget.Entry) {
 	e := widget.NewEntry()
-	e.SetPlaceHolder("ДД.ММ.ГГГГ")
+	e.SetPlaceHolder("ГГГГ.ММ.ДД")
 	e.SetText(isoToUI(iso))
 	e.Validator = func(s string) error {
 		if strings.TrimSpace(s) == "" {
 			return nil
 		}
 		if _, ok := parseUserDate(s); !ok {
-			return errors.New("формат ДД.ММ.ГГГГ")
+			return errors.New("формат ГГГГ.ММ.ДД")
 		}
 		return nil
 	}
@@ -200,6 +200,11 @@ func (u *UI) dateField(iso string, onValid func(string)) (fyne.CanvasObject, *wi
 			onValid(t.Format(dateISO))
 		} else {
 			onValid(s)
+		}
+	}
+	e.OnSubmitted = func(s string) {
+		if date, ok := parseUserDate(s); ok {
+			e.SetText(date.Format(dateUI))
 		}
 	}
 	var btn *widget.Button

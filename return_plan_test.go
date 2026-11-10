@@ -67,7 +67,7 @@ func TestReturnReportShowsEarlierConditionalExtension(t *testing.T) {
 	r := evaluate(trips, rule.Limits, 0, d("2026-01-15"), rule)
 	var b strings.Builder
 	returnPlans(&b, trips, rule, r, nil)
-	if !strings.Contains(b.String(), "# Ближайший возможный въезд на 2 недели: 15.01.2026") || !strings.Contains(b.String(), "потребуется регистрация / продление") {
+	if !strings.Contains(b.String(), "# Ближайший возможный въезд на 2 недели: 2026.01.15") || !strings.Contains(b.String(), "потребуется регистрация / продление") {
 		t.Fatal(b.String())
 	}
 }
@@ -78,7 +78,7 @@ func TestReportCardOrderAndOptionalCar(t *testing.T) {
 	if strings.Contains(report, "## Автомобиль") {
 		t.Fatal("empty car card")
 	}
-	if !strings.Contains(report, "# Выехать не позднее: 30.01.2026") || !strings.Contains(report, "## Возвращение") || strings.Contains(report, "месяц (30 дней)") {
+	if !strings.Contains(report, "# Выехать не позднее: 2026.01.30") || !strings.Contains(report, "## Возвращение") || strings.Contains(report, "месяц (30 дней)") {
 		t.Fatal(report)
 	}
 	u.cur.CarTrips["TEST"] = []Trip{{Entry: "2026-01-01"}}
@@ -99,10 +99,10 @@ func TestReturnScenarioStartsOnReferenceDate(t *testing.T) {
 	r := evaluate(trips, rule.Limits, 7, d("2026-01-15"), rule)
 	var b strings.Builder
 	returnPlans(&b, trips, rule, r, nil)
-	if !strings.Contains(b.String(), "Если выехать сегодня, **15.01.2026**") || !strings.Contains(b.String(), "# Ближайший возможный въезд на 2 недели: 23.01.2026") {
+	if !strings.Contains(b.String(), "Если выехать сегодня, **2026.01.15**") || !strings.Contains(b.String(), "# Ближайший возможный въезд на 2 недели: 2026.01.23") {
 		t.Fatal(b.String())
 	}
-	if strings.Contains(b.String(), "# Ближайший возможный въезд на 2 недели: 07.02.2026") {
+	if strings.Contains(b.String(), "# Ближайший возможный въезд на 2 недели: 2026.02.07") {
 		t.Fatal("used deadline instead of reference date")
 	}
 }
