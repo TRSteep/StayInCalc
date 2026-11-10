@@ -134,21 +134,51 @@ func fullResetDate(trips []Trip, rule *Rule, departure, notBefore time.Time) tim
 	return date
 }
 
-// Сравниваем доступный непрерывный срок с новой поездкой без истории.
-// Полный срок может стать доступен ещё до выпадения всех прошлых дней.
-func firstEntryStayAvailable(trips []Trip, rule *Rule, departure, ref time.Time) bool {
-	entryRule := rule.ForEntry(ref.Format(dateISO))
-	if entryRule.Limits.unlimited() {
-		return !fullResetDate(trips, rule, departure, ref).After(ref)
+// returnStayEnd проверяет максимально допустимый срок для найденного въезда,
+// а не только минимально запрошенные 14 дней. История обрывается днём выезда.
+func returnStayEnd(trips []Trip, rule *Rule, departure time.Time, plan *ReturnPlan) (time.Time, bool) {
+	entryRule := rule.ForEntry(plan.Entry.Format(dateISO))
+	lim := entryRule.Limits
+	if plan.Registered && entryRule.Registration.ExtendsStay {
+		lim = lim.Merge(entryRule.Registration.Extended)
 	}
-	fresh := evaluate(nil, entryRule.Limits, resetGap(rule), ref, rule)
-	if fresh.Error != nil || fresh.ForecastLimited || fresh.EntryBlocked {
-		return false
+	reg := entryRule.Registration
+	if lim.unlimited() && (plan.Registered || !reg.Required || reg.WithinDays == 0) {
+		return time.Time{}, true
 	}
-	target := dayNum(fresh.LatestExit) - dayNum(ref) + 1
-	registered := entryRule.Registration.Required && entryRule.Registration.WithinDays > 0
-	plan := planReturn(trips, rule, departure, ref, target, registered)
-	return plan != nil && plan.Entry.Equal(ref)
+	first := dayNum(plan.Entry)
+	for _, trip := range trips {
+		if entry, ok := parseISO(trip.Entry); ok && !entry.After(departure) {
+			first = min(first, dayNum(entry))
+		}
+	}
+	probe := newPresence(first-1, dayNum(plan.Entry)+horizonDays)
+	for _, trip := range trips {
+		entry, ok := parseISO(trip.Entry)
+		if !ok || entry.After(departure) {
+			continue
+		}
+		end := departure
+		if exit, ok := parseISO(trip.Exit); ok && exit.Before(end) {
+			end = exit
+		}
+		probe.markEntry(dayNum(entry))
+		for day := dayNum(entry); day <= dayNum(end); day++ {
+			probe.set(day, true)
+		}
+	}
+	start := dayNum(plan.Entry)
+	probe.markEntry(start)
+	for day := start; day <= start+horizonDays; day++ {
+		if !plan.Registered && reg.Required && reg.WithinDays > 0 && day-start >= reg.WithinDays {
+			return dayTime(day - 1), false
+		}
+		probe.set(day, true)
+		if probe.broken(day, lim, resetGap(entryRule)) != "" {
+			return dayTime(day - 1), false
+		}
+	}
+	return dayTime(start + horizonDays), true
 }
 
 func returnPlans(b *strings.Builder, trips []Trip, rule *Rule, r Result, cp *Cap) {
@@ -169,57 +199,49 @@ func returnPlans(b *strings.Builder, trips []Trip, rule *Rule, r Result, cp *Cap
 			}
 		}
 	}
-	b.WriteString("### Возвращение\n\n")
+	b.WriteString("\n---\n\n## Возвращение\n\n")
 	if r.InCountry {
 		fmt.Fprintf(b, "Если выехать сегодня, **%s**, и не совершать других поездок:\n\n", fd(departure))
 	} else {
-		fmt.Fprintf(b, "Вы вне страны. Варианты въезда начиная с **%s**:\n\n", fd(r.Ref))
+		fmt.Fprintf(b, "Вы вне страны. Расчёт следующей поездки начиная с **%s**:\n\n", fd(r.Ref))
+	}
+	plan := planReturn(trips, rule, departure, r.Ref, 14, false)
+	if rule.Registration.Required || rule.Registration.ExtendsStay {
+		extended := planReturn(trips, rule, departure, r.Ref, 14, true)
+		if extended != nil && (plan == nil || extended.Entry.Before(plan.Entry)) {
+			plan = extended
+		}
+	}
+	if plan == nil {
+		b.WriteString("**Ближайший возможный въезд на 2 недели:** подходящая дата в пределах трёх лет не найдена.\n\n")
+	} else {
+		fmt.Fprintf(b, "# Ближайший возможный въезд на 2 недели: %s\n\n", fd(plan.Entry))
+		end, limited := returnStayEnd(trips, rule, departure, plan)
+		switch {
+		case end.IsZero():
+			b.WriteString("Точная дата выезда не определяется заданными числовыми лимитами; соблюдайте срок регистрации и разрешительных документов.\n\n")
+		case limited:
+			fmt.Fprintf(b, "Можно провести не менее двух недель. В пределах расчёта до **%s** предел срока не найден.\n\n", fd(end))
+		default:
+			fmt.Fprintf(b, "# Пребывание возможно до: %s\n\n", fd(end))
+			fmt.Fprintf(b, "Включительно **%d дн.** Это максимально допустимый непрерывный срок по заданным правилам, а не только две недели.\n\n", dayNum(end)-dayNum(plan.Entry)+1)
+		}
+		fmt.Fprintf(b, "Полных дней вне страны перед этим въездом: **%d**.\n\n", plan.OutsideDays)
+		if plan.Registered {
+			b.WriteString("Для этого варианта потребуется регистрация / продление.\n\n")
+		}
 	}
 	reset := fullResetDate(trips, rule, departure, r.Ref)
-	fullStay := firstEntryStayAvailable(trips, rule, departure, r.Ref)
 	fmt.Fprintf(b, "# Полное обнуление дней: %s\n\n", fd(reset))
 	if !reset.After(r.Ref) {
-		b.WriteString("По заданным счётчикам лимиты пребывания уже действуют **как при первом въезде**.\n\n")
+		b.WriteString("Старые дни уже не ограничивают новый въезд по заданным счётчикам.\n\n")
 	} else {
-		b.WriteString("К этой дате все дни прошлых поездок выйдут из учитываемых периодов, а ограниченные годовые счётчики въездов обнулятся. Лимиты будут действовать **как при первом въезде**, если до этой даты не совершать новых поездок. Доступные дни могут появляться постепенно раньше этой даты.\n\n")
-		if fullStay {
-			b.WriteString("Уже на дату расчёта новый въезд позволяет провести полный непрерывный срок **как при первом въезде**: старые дни успевают выпадать во время поездки.\n\n")
-		}
+		b.WriteString("Все дни прежних поездок выйдут из учитываемых периодов к этой дате, **если до неё оставаться вне страны**. При въезде раньше начнут учитываться дни новой поездки — нулевого счётчика в эту дату уже не будет.\n\n")
 	}
 	if rule.Registration.Required || rule.Registration.ExtendsStay {
-		b.WriteString("Условия регистрации и отдельного продления сохраняются; прежнее продление не переносится на новый въезд.\n\n")
+		b.WriteString("Условия регистрации сохраняются; прежнее продление не переносится на новый въезд.\n\n")
 	}
 	if rule.VisaRequired {
-		b.WriteString("Дата восстановления счётчиков не заменяет действующую визу или иное основание въезда.\n\n")
+		b.WriteString("Для въезда нужна действующая виза или применимое основание освобождения.\n\n")
 	}
-	if fullStay {
-		return
-	}
-	for _, target := range []int{14, 30} {
-		label := "14 дней"
-		if target == 30 {
-			label = "месяц (30 дней)"
-		}
-		plan := planReturn(trips, rule, departure, r.Ref, target, false)
-		if rule.Registration.Required || rule.Registration.ExtendsStay {
-			extended := planReturn(trips, rule, departure, r.Ref, target, true)
-			if extended != nil && (plan == nil || extended.Entry.Before(plan.Entry)) {
-				plan = extended
-			}
-		}
-		if plan == nil {
-			fmt.Fprintf(b, "- **На %s:** подходящий въезд в пределах трёх лет не найден.\n", label)
-			continue
-		}
-		gap := fmt.Sprintf("**%d** полных дн. вне страны", plan.OutsideDays)
-		if plan.OutsideDays == 0 {
-			gap = "без полных дней вне страны"
-		}
-		fmt.Fprintf(b, "- **На %s** — %s. Въезд **%s** → пребывание до **%s**", label, gap, fd(plan.Entry), fd(plan.Exit))
-		if plan.Registered {
-			b.WriteString("; потребуется регистрация / продление")
-		}
-		b.WriteString(".\n")
-	}
-	b.WriteString("\n")
 }

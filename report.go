@@ -332,6 +332,11 @@ func (u *UI) report() string {
 	}
 
 	r := evaluate(trips, lim, resetGap(rule), u.refDate, rawRule)
+	if r.InCountry {
+		b.WriteString("## Выезд\n\n")
+	} else {
+		b.WriteString("## Въезд\n\n")
+	}
 	if r.Error == nil && r.Unlimited && regCap == nil && reg.Required {
 		b.WriteString("**Срок пребывания — до окончания действующей регистрации.** Дата окончания регистрации в профиле не задана; точная дата выезда автоматически не определяется.\n\n")
 	} else {

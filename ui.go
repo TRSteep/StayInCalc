@@ -634,18 +634,15 @@ func (u *UI) recalc() {
 		if title != "" {
 			style := widget.RichTextStyleHeading
 			style.SizeName = reportTitleSize
-			if strings.HasPrefix(title, "Пребывание на ") {
-				style.SizeName = reportCompactTitleSize
-			}
 			body.Segments = append([]widget.RichTextSegment{&widget.TextSegment{Text: title, Style: style}}, body.Segments...)
 		}
 		body.Refresh()
-		u.result.Add(widget.NewCard("", "", container.NewPadded(styledBody)))
+		u.result.Add(newReportPanel(container.NewPadded(styledBody)))
 	}
 }
 
-const reportTitleSize fyne.ThemeSizeName = "stayincalc.cardTitle"
-const reportCompactTitleSize fyne.ThemeSizeName = "stayincalc.compactTitle"
+const reportTitleSize = theme.SizeNameHeadingText
+const reportCompactTitleSize = theme.SizeNameSubHeadingText
 
 // Акценты наследуют цвет выбранной темы и масштабируются вместе с интерфейсом.
 type reportTheme struct{ fyne.Theme }
@@ -655,10 +652,7 @@ func (t reportTheme) Size(name fyne.ThemeSizeName) float32 {
 		return 24
 	}
 	if name == reportCompactTitleSize {
-		return 20
-	}
-	if name == theme.SizeNameHeadingText {
-		return 26
+		return 22
 	}
 	return t.Theme.Size(name)
 }
@@ -673,25 +667,20 @@ func styleReportSegments(segments []widget.RichTextSegment) []widget.RichTextSeg
 		case *widget.ParagraphSegment:
 			s.Texts = styleReportSegments(s.Texts)
 		case *widget.TextSegment:
-			if s.Text == "Возвращение" {
-				// Непустой пробельный сегмент даёт видимую пустую строку в Fyne.
-				out = append(out, &widget.TextSegment{Text: " ", Style: widget.RichTextStyleParagraph})
-				s.Style.SizeName = reportTitleSize
-			}
 			if s.Style.SizeName == theme.SizeNameHeadingText {
 				label, date, ok := strings.Cut(s.Text, ": ")
-				if ok && (label == "Выехать не позднее" || label == "При въезде можно находиться до" || label == "Полное обнуление дней") {
+				if ok && (label == "Выехать не позднее" || label == "При въезде можно находиться до" || label == "Полное обнуление дней" || label == "Ближайший возможный въезд на 2 недели" || label == "Пребывание возможно до") {
 					labelStyle, dateStyle := s.Style, s.Style
 					labelStyle.Inline, dateStyle.Inline = true, true
 					labelStyle.ColorName = theme.ColorNameForeground
-					if label == "Выехать не позднее" || label == "Полное обнуление дней" {
-						labelStyle.SizeName = reportCompactTitleSize
-					}
+					labelStyle.SizeName = reportCompactTitleSize
+					dateStyle.SizeName = reportCompactTitleSize
 					dateStyle.ColorName = theme.ColorNamePrimary
 					out = append(out, &widget.TextSegment{Text: label + ": ", Style: labelStyle}, &widget.TextSegment{Text: date, Style: dateStyle}, &widget.TextSegment{Style: widget.RichTextStyleParagraph})
 					continue
 				}
 				s.Style.ColorName = theme.ColorNamePrimary
+				s.Style.SizeName = reportCompactTitleSize
 			}
 			if s.Style.TextStyle.Bold && strings.HasSuffix(strings.TrimSpace(previous), "осталось") {
 				s.Style.SizeName = theme.SizeNameSubHeadingText

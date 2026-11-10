@@ -62,12 +62,12 @@ func TestReturnAfterLongAbsence(t *testing.T) {
 }
 
 func TestReturnReportShowsEarlierConditionalExtension(t *testing.T) {
-	rule := &Rule{Limits: Limits{MaxInPeriod: 30, PeriodDays: 180}, VisaRun: VisaRun{Allowed: true}, Registration: Registration{ExtendsStay: true, Extended: Limits{MaxInPeriod: 60}}}
+	rule := &Rule{Limits: Limits{MaxInPeriod: 20, PeriodDays: 180}, VisaRun: VisaRun{Allowed: true}, Registration: Registration{ExtendsStay: true, Extended: Limits{MaxInPeriod: 60}}}
 	trips := []Trip{{Entry: "2026-01-01"}}
 	r := evaluate(trips, rule.Limits, 0, d("2026-01-15"), rule)
 	var b strings.Builder
 	returnPlans(&b, trips, rule, r, nil)
-	if !strings.Contains(b.String(), "Въезд **15.01.2026**") || !strings.Contains(b.String(), "потребуется регистрация / продление") {
+	if !strings.Contains(b.String(), "# Ближайший возможный въезд на 2 недели: 15.01.2026") || !strings.Contains(b.String(), "потребуется регистрация / продление") {
 		t.Fatal(b.String())
 	}
 }
@@ -78,7 +78,7 @@ func TestReportCardOrderAndOptionalCar(t *testing.T) {
 	if strings.Contains(report, "## Автомобиль") {
 		t.Fatal("empty car card")
 	}
-	if !strings.Contains(report, "# Выехать не позднее: 30.01.2026") || !strings.Contains(report, "как при первом въезде") || strings.Contains(report, "месяц (30 дней)") {
+	if !strings.Contains(report, "# Выехать не позднее: 30.01.2026") || !strings.Contains(report, "## Возвращение") || strings.Contains(report, "месяц (30 дней)") {
 		t.Fatal(report)
 	}
 	u.cur.CarTrips["TEST"] = []Trip{{Entry: "2026-01-01"}}
@@ -94,15 +94,15 @@ func TestReportCardOrderAndOptionalCar(t *testing.T) {
 }
 
 func TestReturnScenarioStartsOnReferenceDate(t *testing.T) {
-	rule := &Rule{Limits: Limits{MaxConsecutive: 30}, VisaRun: VisaRun{Allowed: true, MinDaysOutside: 7}}
+	rule := &Rule{Limits: Limits{MaxConsecutive: 20}, VisaRun: VisaRun{Allowed: true, MinDaysOutside: 7}}
 	trips := []Trip{{Entry: "2026-01-01", Exit: "2026-01-25"}}
 	r := evaluate(trips, rule.Limits, 7, d("2026-01-15"), rule)
 	var b strings.Builder
 	returnPlans(&b, trips, rule, r, nil)
-	if !strings.Contains(b.String(), "Если выехать сегодня, **15.01.2026**") || !strings.Contains(b.String(), "Въезд **23.01.2026**") {
+	if !strings.Contains(b.String(), "Если выехать сегодня, **15.01.2026**") || !strings.Contains(b.String(), "# Ближайший возможный въезд на 2 недели: 23.01.2026") {
 		t.Fatal(b.String())
 	}
-	if strings.Contains(b.String(), "Въезд **07.02.2026**") {
+	if strings.Contains(b.String(), "# Ближайший возможный въезд на 2 недели: 07.02.2026") {
 		t.Fatal("used deadline instead of reference date")
 	}
 }

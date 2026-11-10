@@ -7,6 +7,7 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/test"
+	"fyne.io/fyne/v2/theme"
 )
 
 func TestUISnapshot(t *testing.T) {
@@ -28,10 +29,17 @@ func TestUISnapshot(t *testing.T) {
 	p.VehicleRegistrationCountry = "RU"
 	p.Trips[country] = []Trip{{Entry: "2026-05-01", Exit: "2026-06-15"}, {Entry: "2026-09-20", Registered: false}}
 	p.CarTrips[country] = []Trip{{Entry: "2026-05-01", Exit: "2026-06-15"}, {Entry: "2026-09-20"}}
+	if os.Getenv("SNAPSHOT_EXAMPLE") == "KZ_RETURN" {
+		p.Trips[country] = []Trip{{Entry: "2026-08-05", Exit: "2026-11-02"}}
+		p.CarTrips[country] = nil
+	}
 	s.SaveProfile(p)
 	s.NewProfile("Мария", "RU")
 
 	a := test.NewApp()
+	if os.Getenv("SNAPSHOT_LIGHT") == "1" {
+		a.Settings().SetTheme(theme.LightTheme())
+	}
 	u := newUI(a, s)
 	u.profileSel.SetSelected("Иван")
 	refDate := os.Getenv("SNAPSHOT_DATE")
@@ -40,6 +48,9 @@ func TestUISnapshot(t *testing.T) {
 	}
 	u.refEntry.SetText(refDate)
 	u.win.Resize(fyne.NewSize(1250, 760))
+	if os.Getenv("SNAPSHOT_FULL") == "1" {
+		u.win.Resize(fyne.NewSize(1250, 1600))
+	}
 	img := u.win.Canvas().Capture()
 	f, _ := os.Create(out)
 	defer f.Close()

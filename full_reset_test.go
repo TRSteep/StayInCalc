@@ -29,23 +29,22 @@ func TestFullResetDates(t *testing.T) {
 	}
 }
 
-func TestFullStaySuppressesShortOptionsBeforeAllDaysExpire(t *testing.T) {
+func TestReturnSummaryShowsTwoWeeksEvenAfterFullAllowanceRecovers(t *testing.T) {
 	rule := &Rule{Limits: Limits{MaxInPeriod: 90, PeriodDays: 180}}
 	trips := []Trip{{Entry: "2026-01-01", Exit: "2026-03-31"}}
-	if !firstEntryStayAvailable(trips, rule, d("2026-03-31"), d("2026-06-30")) {
+	if plan := planReturn(trips, rule, d("2026-03-31"), d("2026-06-30"), 90, false); plan == nil || plan.Entry != d("2026-06-30") {
 		t.Fatal("full 90-day stay already possible as old days expire")
 	}
-	if firstEntryStayAvailable(trips, rule, d("2026-03-31"), d("2026-06-29")) {
+	if plan := planReturn(trips, rule, d("2026-03-31"), d("2026-06-29"), 90, false); plan != nil && plan.Entry == d("2026-06-29") {
 		t.Fatal("full stay is still blocked")
 	}
 	for _, tc := range []struct {
-		ref   string
-		short bool
-	}{{"2026-04-01", true}, {"2026-06-30", false}, {"2026-09-28", false}} {
+		ref string
+	}{{"2026-04-01"}, {"2026-06-30"}, {"2026-09-28"}} {
 		r := evaluate(trips, rule.Limits, 0, d(tc.ref), rule)
 		var b strings.Builder
 		returnPlans(&b, trips, rule, r, nil)
-		if strings.Contains(b.String(), "месяц (30 дней)") != tc.short {
+		if strings.Contains(b.String(), "месяц (30 дней)") || !strings.Contains(b.String(), "# Ближайший возможный въезд на 2 недели:") {
 			t.Fatal(b.String())
 		}
 		if !strings.Contains(b.String(), "# Полное обнуление дней:") {
